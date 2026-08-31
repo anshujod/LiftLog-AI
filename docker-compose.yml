@@ -1,0 +1,33 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: liftlog
+      POSTGRES_PASSWORD: liftlog
+      POSTGRES_DB: liftlog
+    ports:
+      - "5434:5432"
+    volumes:
+      - liftlog_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U liftlog -d liftlog"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: ./api
+    env_file:
+      - ./api/.env
+    environment:
+      DATABASE_URL: postgresql+psycopg://liftlog:liftlog@db:5432/liftlog
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./api:/app
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  liftlog_db_data:
