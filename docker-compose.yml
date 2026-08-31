@@ -25,9 +25,11 @@ services:
       - "8000:8000"
     volumes:
       - ./api:/app
+      - liftlog_api_venv:/app/.venv
     depends_on:
       db:
         condition: service_healthy
 
 volumes:
   liftlog_db_data:
+  liftlog_api_venv:
