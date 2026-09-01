@@ -10,7 +10,9 @@ def test_muscle_groups_seeded(db_session: Session) -> None:
 
 
 def test_exercises_seeded(db_session: Session) -> None:
-    count = db_session.scalar(select(func.count()).select_from(Exercise))
+    count = db_session.scalar(
+        select(func.count()).select_from(Exercise).where(Exercise.user_id.is_(None))
+    )
     assert count == 63
 
 
