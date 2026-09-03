@@ -19,7 +19,12 @@ api/            FastAPI + SQLAlchemy 2.0 + PostgreSQL backend
     ai/         LLM interpretation layer, depends only on analytics output
   alembic/      database migrations
   seeds/        exercise library and fixture data
-web/            Next.js PWA frontend (added later)
+web/            Next.js App Router PWA frontend
+  app/          routes, layouts, the (app) tab shell, and /api/auth/* route handlers
+  lib/api/      typed fetch client, generated OpenAPI types, auth-cookie helpers
+  lib/auth/     AuthProvider (session bootstrap, login/register/logout)
+  components/   shared UI (bottom nav, resume-workout banner, SW registration)
+  proxy.ts      redirects unauthenticated requests to /login (Next 16's middleware)
 ```
 
 The `analytics/` package takes typed inputs and returns typed outputs with zero I/O.
@@ -64,3 +69,26 @@ make test      # backend test suite
 make lint      # ruff + mypy
 make migrate   # apply database migrations
 ```
+
+### Frontend
+
+Requirements: the API running locally (`make up`), and Node 20+.
+
+```bash
+cd web
+npm install
+cp .env.local.example .env.local   # defaults already point at localhost:8000
+npm run dev
+```
+
+The app is served at `http://localhost:3000`, dark mode by default, installable as a PWA.
+
+```bash
+npm run gen:api   # regenerate lib/api/schema.d.ts from the running backend's OpenAPI schema
+npm run lint       # eslint
+npm run build      # production build + typecheck
+```
+
+`.github/workflows/frontend-ci.yml` regenerates `schema.d.ts` against a freshly built
+backend on every PR touching `web/` or `api/` and fails if the working tree comes out
+dirty, so a backend schema change can't silently drift from the frontend types.
