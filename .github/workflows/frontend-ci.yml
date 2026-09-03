@@ -64,6 +64,9 @@ jobs:
             exit 1
           fi
 
+      - name: Generate Next.js route types
+        run: npx next typegen
+
       - name: Type check
         run: npx tsc --noEmit
 
