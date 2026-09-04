@@ -1,12 +1,21 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { listWorkouts } from "@/lib/api/workouts";
 
-/** The id of the caller's in-progress (unfinished) workout, if any. */
+/**
+ * The id of the caller's in-progress (unfinished) workout, if any.
+ *
+ * This is also mounted persistently in the app layout (for the resume banner),
+ * so it re-checks on every navigation rather than only once on mount — otherwise
+ * finishing a workout on /workout/[id] and navigating elsewhere would leave the
+ * banner showing a workout that's already done.
+ */
 export function useActiveWorkoutId(): string | null {
   const { status } = useAuth();
+  const pathname = usePathname();
   const [activeWorkoutId, setActiveWorkoutId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -25,7 +34,7 @@ export function useActiveWorkoutId(): string | null {
     return () => {
       cancelled = true;
     };
-  }, [status]);
+  }, [status, pathname]);
 
   return activeWorkoutId;
 }
