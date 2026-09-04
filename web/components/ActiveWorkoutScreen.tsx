@@ -1,0 +1,148 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useActiveWorkout } from "@/hooks/useActiveWorkout";
+import { useWakeLock } from "@/hooks/useWakeLock";
+import { ExercisePicker } from "@/components/ExercisePicker";
+import { WorkoutExerciseCard } from "@/components/WorkoutExerciseCard";
+import { RestTimer } from "@/components/RestTimer";
+import { getUnitPreference, type Unit } from "@/lib/units";
+import type { SetRowValues } from "@/components/SetRow";
+import type { Exercise } from "@/lib/api/exercises";
+import { ApiError } from "@/lib/api/errors";
+
+function SyncIndicator({ pendingCount, retrying }: { pendingCount: number; retrying: boolean }) {
+  if (pendingCount === 0) return null;
+  return <span className="text-xs text-muted">{retrying ? "Waiting for connection…" : "Syncing…"}</span>;
+}
+
+export function ActiveWorkoutScreen() {
+  const searchParams = useSearchParams();
+  const resumeId = searchParams.get("resume");
+  const router = useRouter();
+  const activeWorkout = useActiveWorkout(resumeId);
+  const [unit, setUnit] = useState<Unit>("kg");
+  const [showPicker, setShowPicker] = useState(false);
+  const [restKey, setRestKey] = useState(0);
+  const [finishing, setFinishing] = useState(false);
+  const [finishError, setFinishError] = useState<string | null>(null);
+
+  useWakeLock(activeWorkout.status === "ready");
+
+  useEffect(() => {
+    getUnitPreference()
+      .then(setUnit)
+      .catch(() => {});
+  }, []);
+
+  function handleLogSet(workoutExerciseId: string, values: SetRowValues) {
+    activeWorkout.addSet(workoutExerciseId, values);
+    setRestKey((k) => k + 1);
+  }
+
+  function handleAddExercise(exercise: Exercise) {
+    setShowPicker(false);
+    void activeWorkout.addExercise(exercise);
+  }
+
+  async function handleFinish() {
+    if (!activeWorkout.canFinish || !activeWorkout.workout) return;
+    setFinishing(true);
+    setFinishError(null);
+    try {
+      const summary = await activeWorkout.finish();
+      try {
+        sessionStorage.setItem(`liftlog:finish:${activeWorkout.workout.id}`, JSON.stringify(summary));
+      } catch {
+        // non-critical — the detail page still renders without the celebratory summary
+      }
+      router.push(`/workout/${activeWorkout.workout.id}`);
+    } catch (err) {
+      setFinishError(err instanceof ApiError ? err.message : "Couldn't finish the workout");
+      setFinishing(false);
+    }
+  }
+
+  if (activeWorkout.status === "resolving" || activeWorkout.status === "loading") {
+    return (
+      <div className="flex flex-col gap-3 p-4" aria-busy="true">
+        <div className="h-24 animate-pulse rounded-xl bg-surface" />
+        <div className="h-24 animate-pulse rounded-xl bg-surface" />
+      </div>
+    );
+  }
+
+  if (activeWorkout.status === "error") {
+    return (
+      <p className="p-4 text-sm text-danger" role="alert">
+        {activeWorkout.error}
+      </p>
+    );
+  }
+
+  if (activeWorkout.status === "none") {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-center">
+        <p className="text-muted">No workout in progress.</p>
+        <button
+          type="button"
+          onClick={() => void activeWorkout.start()}
+          className="h-14 w-full max-w-xs rounded-lg bg-accent text-lg font-medium text-white"
+        >
+          Start workout
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-4 p-4 pb-8">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-semibold">Workout</h1>
+        <SyncIndicator pendingCount={activeWorkout.pendingCount} retrying={activeWorkout.retrying} />
+      </div>
+
+      {restKey > 0 && <RestTimer key={restKey} />}
+
+      {activeWorkout.exercises.map((ex) => (
+        <WorkoutExerciseCard
+          key={ex.workoutExerciseId}
+          displayExercise={ex}
+          unit={unit}
+          onLogSet={(values) => handleLogSet(ex.workoutExerciseId, values)}
+          onUpdateSet={(clientId, values) => activeWorkout.updateSet(ex.workoutExerciseId, clientId, values)}
+          onDeleteSet={(clientId) => activeWorkout.deleteSet(ex.workoutExerciseId, clientId)}
+          onRemoveExercise={() => void activeWorkout.removeExercise(ex.workoutExerciseId)}
+        />
+      ))}
+
+      <button
+        type="button"
+        onClick={() => setShowPicker(true)}
+        className="h-12 rounded-lg border border-dashed border-border text-sm text-accent"
+      >
+        + Add exercise
+      </button>
+
+      {finishError && (
+        <p className="text-sm text-danger" role="alert">
+          {finishError}
+        </p>
+      )}
+
+      <button
+        type="button"
+        onClick={() => void handleFinish()}
+        disabled={!activeWorkout.canFinish || finishing || activeWorkout.exercises.length === 0}
+        className="h-14 rounded-lg bg-accent text-lg font-medium text-white disabled:opacity-50"
+      >
+        {finishing ? "Finishing…" : activeWorkout.canFinish ? "Finish workout" : "Syncing…"}
+      </button>
+
+      {showPicker && (
+        <ExercisePicker variant="sheet" onSelect={handleAddExercise} onClose={() => setShowPicker(false)} />
+      )}
+    </div>
+  );
+}
