@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useActiveWorkout } from "@/hooks/useActiveWorkout";
 import { useWakeLock } from "@/hooks/useWakeLock";
@@ -9,7 +9,7 @@ import { WorkoutExerciseCard } from "@/components/WorkoutExerciseCard";
 import { RestTimer } from "@/components/RestTimer";
 import { getUnitPreference, type Unit } from "@/lib/units";
 import type { SetRowValues } from "@/components/SetRow";
-import type { Exercise } from "@/lib/api/exercises";
+import { getExercise, type Exercise } from "@/lib/api/exercises";
 import { ApiError } from "@/lib/api/errors";
 
 function SyncIndicator({ pendingCount, retrying }: { pendingCount: number; retrying: boolean }) {
@@ -20,6 +20,7 @@ function SyncIndicator({ pendingCount, retrying }: { pendingCount: number; retry
 export function ActiveWorkoutScreen() {
   const searchParams = useSearchParams();
   const resumeId = searchParams.get("resume");
+  const suggestParam = searchParams.get("suggest");
   const router = useRouter();
   const activeWorkout = useActiveWorkout(resumeId);
   const [unit, setUnit] = useState<Unit>("kg");
@@ -27,6 +28,7 @@ export function ActiveWorkoutScreen() {
   const [restKey, setRestKey] = useState(0);
   const [finishing, setFinishing] = useState(false);
   const [finishError, setFinishError] = useState<string | null>(null);
+  const suggestionStartedRef = useRef(false);
 
   useWakeLock(activeWorkout.status === "ready");
 
@@ -35,6 +37,21 @@ export function ActiveWorkoutScreen() {
       .then(setUnit)
       .catch(() => {});
   }, []);
+
+  // A "Start this workout" tap from the dashboard's suggestion card lands here
+  // with ?suggest=<exerciseId,...> — turn that into an actual one-tap start.
+  useEffect(() => {
+    if (activeWorkout.status !== "none" || !suggestParam || suggestionStartedRef.current) return;
+    suggestionStartedRef.current = true;
+    const ids = suggestParam.split(",").filter(Boolean);
+    void (async () => {
+      const exercises = (await Promise.allSettled(ids.map((id) => getExercise(id))))
+        .filter((r): r is PromiseFulfilledResult<Exercise> => r.status === "fulfilled")
+        .map((r) => r.value);
+      await activeWorkout.startWithExercises(exercises);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeWorkout.status, suggestParam]);
 
   function handleLogSet(workoutExerciseId: string, values: SetRowValues) {
     activeWorkout.addSet(workoutExerciseId, values);

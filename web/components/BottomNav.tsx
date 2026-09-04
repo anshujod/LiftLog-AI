@@ -8,6 +8,7 @@ const TABS = [
   { href: "/workout", label: "Workout" },
   { href: "/exercises", label: "Exercises" },
   { href: "/history", label: "History" },
+  { href: "/analysis", label: "Analysis" },
 ] as const;
 
 const ICON_PATHS: Record<(typeof TABS)[number]["href"], string> = {
@@ -15,6 +16,7 @@ const ICON_PATHS: Record<(typeof TABS)[number]["href"], string> = {
   "/workout": "M4 12h16M4 12v-3M4 12v3M20 12v-3M20 12v3M8 8v8M16 8v8",
   "/exercises": "M11 5a6 6 0 1 0 0 12 6 6 0 0 0 0-12ZM20 20l-4.5-4.5",
   "/history": "M12 3a9 9 0 1 0 9 9M12 7v5l3.5 2M3 3v5h5",
+  "/analysis": "M4 20V10M10 20V4M16 20v-7M22 20H2",
 };
 
 export function BottomNav() {
