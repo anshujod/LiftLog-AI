@@ -40,6 +40,20 @@ function localClientId(): string {
   return `local:${crypto.randomUUID()}`;
 }
 
+async function fetchLastSessionSets(exerciseId: string): Promise<{ load_g: number; reps: number }[]> {
+  try {
+    const lastSession = await getLastSession(exerciseId);
+    return (
+      lastSession.session?.sets
+        .filter((s) => !s.is_warmup)
+        .map((s) => ({ load_g: s.load.grams, reps: s.reps })) ?? []
+    );
+  } catch {
+    // last-session prefill is a nicety — an empty draft row still works
+    return [];
+  }
+}
+
 function toDisplayExercise(we: WorkoutExercise): DisplayExercise {
   return {
     workoutExerciseId: we.id,
@@ -101,6 +115,7 @@ export interface UseActiveWorkoutResult {
   retrying: boolean;
   canFinish: boolean;
   start: () => Promise<void>;
+  startWithExercises: (exercises: Exercise[]) => Promise<void>;
   addExercise: (exercise: Exercise) => Promise<void>;
   removeExercise: (workoutExerciseId: string) => Promise<void>;
   addSet: (workoutExerciseId: string, data: SetInput) => void;
@@ -255,20 +270,42 @@ export function useActiveWorkout(resumeId: string | null | undefined): UseActive
     async (exercise: Exercise) => {
       if (!workout) return;
       const we = await addWorkoutExercise(workout.id, exercise.id);
-      let lastSessionSets: { load_g: number; reps: number }[] = [];
-      try {
-        const lastSession = await getLastSession(exercise.id);
-        lastSessionSets =
-          lastSession.session?.sets
-            .filter((s) => !s.is_warmup)
-            .map((s) => ({ load_g: s.load.grams, reps: s.reps })) ?? [];
-      } catch {
-        // last-session prefill is a nicety — an empty draft row still works
-      }
+      const lastSessionSets = await fetchLastSessionSets(exercise.id);
       setExercises((prev) => [...prev, { ...toDisplayExercise(we), lastSessionSets }]);
     },
     [workout]
   );
+
+  /**
+   * Creates a workout and adds every given exercise in one sequential flow.
+   * Unlike calling start() then addExercise() from outside this hook, every
+   * step here reads the workout id from a local variable rather than hook
+   * state, so it can't race a stale `workout` closure from before start()
+   * committed — the exact bug an external orchestration would hit.
+   */
+  const startWithExercises = useCallback(async (exercises: Exercise[]) => {
+    setStatus("loading");
+    setError(null);
+    try {
+      const created = await createWorkout();
+      attachQueue(created.id);
+      setWorkout(created);
+      setPendingCount(0);
+
+      const displayExercises: DisplayExercise[] = [];
+      for (const exercise of exercises) {
+        const we = await addWorkoutExercise(created.id, exercise.id);
+        const lastSessionSets = await fetchLastSessionSets(exercise.id);
+        displayExercises.push({ ...toDisplayExercise(we), lastSessionSets });
+      }
+
+      setExercises(displayExercises);
+      setStatus("ready");
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Couldn't start a workout");
+      setStatus("error");
+    }
+  }, [attachQueue]);
 
   const removeExercise = useCallback(async (workoutExerciseId: string) => {
     setExercises((prev) => prev.filter((ex) => ex.workoutExerciseId !== workoutExerciseId));
@@ -354,6 +391,7 @@ export function useActiveWorkout(resumeId: string | null | undefined): UseActive
     retrying,
     canFinish: pendingCount === 0,
     start,
+    startWithExercises,
     addExercise,
     removeExercise,
     addSet,

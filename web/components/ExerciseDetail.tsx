@@ -13,6 +13,7 @@ import {
   type SessionSummary,
 } from "@/lib/api/exercises";
 import { LastSessionPanel } from "@/components/LastSessionPanel";
+import { ExerciseCharts } from "@/components/ExerciseCharts";
 import { formatAbsoluteDate, formatRelativeDate } from "@/lib/dates";
 import { formatLoad, getUnitPreference, type Unit } from "@/lib/units";
 import { ApiError } from "@/lib/api/errors";
@@ -103,6 +104,8 @@ export function ExerciseDetail({ exerciseId }: ExerciseDetailProps) {
       <h1 className="text-2xl font-semibold">{exercise?.name ?? "…"}</h1>
 
       <LastSessionPanel exerciseId={exerciseId} />
+
+      {exercise && <ExerciseCharts exercise={exercise} />}
 
       <div className="grid grid-cols-3 gap-2 rounded-xl border border-border bg-surface p-4 text-center">
         <div>
