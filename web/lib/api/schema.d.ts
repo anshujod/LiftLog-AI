@@ -194,6 +194,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/exercises/{exercise_id}/progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Exercise Progress */
+        get: operations["get_exercise_progress_exercises__exercise_id__progress_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/workouts": {
         parameters: {
             query?: never;
@@ -335,10 +352,94 @@ export interface paths {
         patch: operations["update_set_sets__set_id__patch"];
         trace?: never;
     };
+    "/analytics/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Dashboard */
+        get: operations["get_dashboard_analytics_dashboard_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analytics/muscle-groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Muscle Group Volume */
+        get: operations["get_muscle_group_volume_analytics_muscle_groups_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analytics/volume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Volume */
+        get: operations["get_volume_analytics_volume_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analytics/plateaus": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Plateaus */
+        get: operations["get_plateaus_analytics_plateaus_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** DashboardOut */
+        DashboardOut: {
+            /** Recent Workouts */
+            recent_workouts: components["schemas"]["WorkoutSummaryOut"][];
+            /** Top Improving Exercises */
+            top_improving_exercises: components["schemas"]["TopImprovingExerciseOut"][];
+            /** Recent Prs */
+            recent_prs: components["schemas"]["NewPROut"][];
+            weekly_volume: components["schemas"]["WeeklyVolumeOut"];
+            /** Workout Count */
+            workout_count: number;
+            /** Current Streak Weeks */
+            current_streak_weeks: number;
+            /** Period Days */
+            period_days: number;
+        };
         /** E1RMPROut */
         E1RMPROut: {
             estimated_1rm: components["schemas"]["LoadValue"];
@@ -475,6 +576,16 @@ export interface components {
             /** Display Order */
             display_order: number;
         };
+        /** MuscleGroupVolumeOut */
+        MuscleGroupVolumeOut: {
+            /** Muscle Group Slug */
+            muscle_group_slug: string;
+            /** Muscle Group Name */
+            muscle_group_name: string;
+            volume: components["schemas"]["LoadValue"];
+            /** Working Set Count */
+            working_set_count: number;
+        };
         /** NewPROut */
         NewPROut: {
             /**
@@ -503,11 +614,70 @@ export interface components {
              */
             performed_on: string;
         };
+        /** PlateauOut */
+        PlateauOut: {
+            /**
+             * Exercise Id
+             * Format: uuid
+             */
+            exercise_id: string;
+            /** Exercise Name */
+            exercise_name: string;
+            /**
+             * Metric
+             * @enum {string}
+             */
+            metric: "e1rm" | "top_weight" | "volume" | "reps_at_load";
+            /** Session Count */
+            session_count: number;
+            /**
+             * Window Start
+             * Format: date
+             */
+            window_start: string;
+            /**
+             * Window End
+             * Format: date
+             */
+            window_end: string;
+            /** Window Days */
+            window_days: number;
+            /** Weeks Since New Best */
+            weeks_since_new_best: number;
+            /** Improvement Pct */
+            improvement_pct: number;
+        };
         /**
          * ProgressionMetric
          * @enum {string}
          */
         ProgressionMetric: "e1rm" | "top_weight" | "volume" | "reps_at_load";
+        /** ProgressionOut */
+        ProgressionOut: {
+            /**
+             * Metric
+             * @enum {string}
+             */
+            metric: "e1rm" | "top_weight" | "volume" | "reps_at_load";
+            /** Has Data */
+            has_data: boolean;
+            /** Session Count */
+            session_count: number;
+            /** Starting Value */
+            starting_value?: number | null;
+            /** Current Value */
+            current_value?: number | null;
+            /** Starting Display */
+            starting_display?: string | null;
+            /** Current Display */
+            current_display?: string | null;
+            /** Absolute Change */
+            absolute_change?: number | null;
+            /** Percent Change */
+            percent_change?: number | null;
+            /** Direction */
+            direction?: ("improving" | "flat" | "declining") | null;
+        };
         /** RefreshRequest */
         RefreshRequest: {
             /** Refresh Token */
@@ -632,6 +802,23 @@ export interface components {
              */
             token_type: string;
         };
+        /** TopImprovingExerciseOut */
+        TopImprovingExerciseOut: {
+            /**
+             * Exercise Id
+             * Format: uuid
+             */
+            exercise_id: string;
+            /** Exercise Name */
+            exercise_name: string;
+            /**
+             * Metric
+             * @enum {string}
+             */
+            metric: "e1rm" | "top_weight" | "volume" | "reps_at_load";
+            /** Percent Change */
+            percent_change: number;
+        };
         /**
          * UnitPref
          * @enum {string}
@@ -668,6 +855,22 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
+        };
+        /** VolumeByPeriodOut */
+        VolumeByPeriodOut: {
+            /**
+             * Period Start
+             * Format: date
+             */
+            period_start: string;
+            volume: components["schemas"]["LoadValue"];
+        };
+        /** WeeklyVolumeOut */
+        WeeklyVolumeOut: {
+            current_week: components["schemas"]["LoadValue"];
+            previous_week: components["schemas"]["LoadValue"];
+            /** Percent Change */
+            percent_change: number | null;
         };
         /** WeightPROut */
         WeightPROut: {
@@ -1217,6 +1420,39 @@ export interface operations {
             };
         };
     };
+    get_exercise_progress_exercises__exercise_id__progress_get: {
+        parameters: {
+            query?: {
+                period?: "30d" | "90d" | "1y" | "all";
+            };
+            header?: never;
+            path: {
+                exercise_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgressionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_workouts_workouts_get: {
         parameters: {
             query?: {
@@ -1637,6 +1873,109 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_dashboard_analytics_dashboard_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DashboardOut"];
+                };
+            };
+        };
+    };
+    get_muscle_group_volume_analytics_muscle_groups_get: {
+        parameters: {
+            query?: {
+                period?: "30d" | "90d" | "1y" | "all";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MuscleGroupVolumeOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_volume_analytics_volume_get: {
+        parameters: {
+            query?: {
+                period?: "30d" | "90d" | "1y" | "all";
+                granularity?: "week" | "month";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VolumeByPeriodOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_plateaus_analytics_plateaus_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlateauOut"][];
                 };
             };
         };
