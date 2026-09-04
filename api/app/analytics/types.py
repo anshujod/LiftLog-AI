@@ -13,6 +13,13 @@ class LoadType(enum.StrEnum):
     ASSISTED = "assisted"
 
 
+class ProgressionMetric(enum.StrEnum):
+    E1RM = "e1rm"
+    TOP_WEIGHT = "top_weight"
+    VOLUME = "volume"
+    REPS_AT_LOAD = "reps_at_load"
+
+
 @dataclass(frozen=True, slots=True)
 class SetRecord:
     load_g: int
@@ -20,3 +27,17 @@ class SetRecord:
     is_warmup: bool
     performed_on: date
     workout_id: uuid.UUID
+
+
+@dataclass(frozen=True, slots=True)
+class ExerciseSetRecord:
+    """A SetRecord plus the per-exercise context needed to aggregate volume across
+    exercises with different load types and muscle groups in one pass."""
+
+    load_g: int
+    reps: int
+    is_warmup: bool
+    performed_on: date
+    workout_id: uuid.UUID
+    load_type: LoadType
+    muscle_group_slug: str

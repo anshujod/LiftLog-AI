@@ -15,3 +15,11 @@ def first_max[T](items: Iterable[T], key: Callable[[T], int | None]) -> tuple[T,
     if best_item is None or best_value is None:
         return None
     return best_item, best_value
+
+
+def bucket_load(load_g: int, increment_g: int) -> int:
+    """Round a load to the nearest increment so near-identical loads (60.0 vs 60.4 kg)
+    compare as the same working weight."""
+    if increment_g <= 0:
+        return load_g
+    return round(load_g / increment_g) * increment_g

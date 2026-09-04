@@ -3,7 +3,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import date
 
-from app.analytics._util import first_max
+from app.analytics._util import bucket_load, first_max
 from app.analytics.loads import set_volume_g
 from app.analytics.one_rm import estimate_1rm_g
 from app.analytics.types import LoadType, SetRecord
@@ -30,12 +30,6 @@ class PRResult:
     session_volume_pr: SessionVolumePR | None
 
 
-def _bucket_load(load_g: int, default_increment_g: int) -> int:
-    if default_increment_g <= 0:
-        return load_g
-    return round(load_g / default_increment_g) * default_increment_g
-
-
 def weight_pr(sets: Iterable[SetRecord]) -> SetPR | None:
     working_sets = [s for s in sets if not s.is_warmup]
     found = first_max(working_sets, key=lambda s: s.load_g)
@@ -59,7 +53,7 @@ def rep_pr(sets: Iterable[SetRecord], default_increment_g: int) -> SetPR | None:
     for record in sets:
         if record.is_warmup:
             continue
-        bucket = _bucket_load(record.load_g, default_increment_g)
+        bucket = bucket_load(record.load_g, default_increment_g)
         current = best_by_bucket.get(bucket)
         if current is None or record.reps > current.value:
             best_by_bucket[bucket] = SetPR(value=record.reps, set_record=record)

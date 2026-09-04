@@ -4,10 +4,12 @@ from sqlalchemy.orm import Session
 from app.core.dependencies import get_current_user, get_visible_exercise
 from app.db.models import Exercise, MuscleGroup, User
 from app.db.session import get_db
+from app.schemas.analytics import ProgressionOut
 from app.schemas.exercise import ExerciseCreate, ExerciseOut, ExerciseUpdate, MuscleGroupOut
 from app.schemas.pr import ExercisePRsOut
 from app.schemas.session import HistoryPageOut, LastSessionOut
-from app.services import exercise_service
+from app.services import analytics_service, exercise_service
+from app.services.analytics_service import Period
 
 router = APIRouter(tags=["exercises"])
 
@@ -82,3 +84,13 @@ def get_prs(
     db: Session = Depends(get_db),
 ) -> ExercisePRsOut:
     return exercise_service.get_prs(db, current_user, exercise)
+
+
+@router.get("/exercises/{exercise_id}/progress", response_model=ProgressionOut)
+def get_exercise_progress(
+    period: Period = "90d",
+    exercise: Exercise = Depends(get_visible_exercise),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ProgressionOut:
+    return analytics_service.get_exercise_progress(db, current_user, exercise, period)
