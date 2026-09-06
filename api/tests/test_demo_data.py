@@ -1,10 +1,12 @@
 import time
 import uuid
 
+from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import User, Workout
+from app.main import app
 from app.services import analytics_service
 from seeds.demo_data import generate_demo_history
 
@@ -74,3 +76,42 @@ class TestDemoData:
             max(w.performed_on for w in all_workouts) - min(w.performed_on for w in all_workouts)
         ).days
         assert span_days >= 150
+
+
+class TestDashboardWithBodyweightMoves:
+    def test_dashboard_handles_bodyweight_exercises(self, db_session: Session) -> None:
+        with TestClient(app) as client:
+            reg = client.post(
+                "/auth/register",
+                json={"email": f"bw-{uuid.uuid4()}@example.com", "password": "supersecurepw"},
+            )
+            assert reg.status_code == 200
+            headers = {"Authorization": f"Bearer {reg.json()['access_token']}"}
+
+            patched = client.patch("/me", headers=headers, json={"bodyweight_g": 80000})
+            assert patched.status_code == 200
+
+            pullups = next(
+                e
+                for e in client.get("/exercises", headers=headers).json()
+                if e["name"] == "Pull-ups"
+            )
+            workout = client.post("/workouts", headers=headers, json={}).json()
+            we = client.post(
+                f"/workouts/{workout['id']}/exercises",
+                headers=headers,
+                json={"exercise_id": pullups["id"]},
+            ).json()
+            bulk = client.post(
+                f"/workout-exercises/{we['id']}/sets/bulk",
+                headers=headers,
+                json=[{"load_g": 0, "reps": 8}, {"load_g": 5000, "reps": 6}],
+            )
+            assert bulk.status_code == 200
+            assert (
+                client.post(f"/workouts/{workout['id']}/finish", headers=headers).status_code == 200
+            )
+
+            dashboard = client.get("/analytics/dashboard", headers=headers)
+            assert dashboard.status_code == 200, dashboard.text
+            assert dashboard.json()["recent_workouts"]

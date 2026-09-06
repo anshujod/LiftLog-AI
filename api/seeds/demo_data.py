@@ -1,10 +1,10 @@
 """Realistic 6-month progressive-overload fixture for one user.
 
 Produces a Push / Pull / Legs program run 6 days per week for 26 weeks
-(~156 finished workouts, ~700 exercise slots, ~2000 sets) with steady
-load progression, small session-to-session noise, and a deload every
-fifth week. Deterministic for a given seed so tests, chart development,
-and later evaluation can rely on it.
+(~130 finished workouts once weekly rest days are skipped, ~650 exercise
+slots, ~2000 sets) with steady load progression, small session-to-session
+noise, and a deload every fifth week. Deterministic for a given seed so
+tests, chart development, and later evaluation can rely on it.
 
 Usage:
     python -m seeds.demo_data --email demo@example.com --weeks 26 --seed 42

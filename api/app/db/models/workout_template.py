@@ -2,7 +2,16 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, ForeignKey, Index, SmallInteger, Text, UniqueConstraint, text
+from sqlalchemy import (
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Index,
+    SmallInteger,
+    Text,
+    UniqueConstraint,
+    text,
+)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -41,6 +50,10 @@ class TemplateExercise(Base):
         UniqueConstraint("template_id", "position"),
         Index("template_exercises_template_idx", "template_id"),
         Index("template_exercises_exercise_idx", "exercise_id"),
+        CheckConstraint(
+            "target_sets IS NULL OR target_sets > 0",
+            name="template_exercises_target_sets_check",
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
