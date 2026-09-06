@@ -9,6 +9,7 @@ import {
   type Workout,
   type FinishSummary,
 } from "@/lib/api/workouts";
+import { saveWorkoutAsTemplate } from "@/lib/api/templates";
 import { SetRow, type SetRowValues } from "@/components/SetRow";
 import { getUnitPreference, type Unit } from "@/lib/units";
 import { formatAbsoluteDate, formatRelativeDate } from "@/lib/dates";
@@ -39,6 +40,11 @@ export function WorkoutDetail({ workoutId }: WorkoutDetailProps) {
   });
   const [unit, setUnit] = useState<Unit>("kg");
   const [error, setError] = useState<string | null>(null);
+  const [showSaveForm, setShowSaveForm] = useState(false);
+  const [templateName, setTemplateName] = useState("");
+  const [savingTemplate, setSavingTemplate] = useState(false);
+  const [saveTemplateError, setSaveTemplateError] = useState<string | null>(null);
+  const [savedTemplateId, setSavedTemplateId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -89,6 +95,22 @@ export function WorkoutDetail({ workoutId }: WorkoutDetailProps) {
       await apiUpdateSet(setId, { load_g: values.load_g, reps: values.reps, is_warmup: values.is_warmup });
     } catch {
       // best-effort optimistic edit — a reconciling refetch would double the requests per edit
+    }
+  }
+
+  async function handleSaveAsTemplate() {
+    if (!workout || !templateName.trim() || savingTemplate) return;
+    setSavingTemplate(true);
+    setSaveTemplateError(null);
+    try {
+      const template = await saveWorkoutAsTemplate(workout.id, { name: templateName.trim() });
+      setSavedTemplateId(template.id);
+      setShowSaveForm(false);
+      setTemplateName("");
+    } catch (err) {
+      setSaveTemplateError(err instanceof ApiError ? err.message : "Couldn't save the template");
+    } finally {
+      setSavingTemplate(false);
     }
   }
 
@@ -153,6 +175,65 @@ export function WorkoutDetail({ workoutId }: WorkoutDetailProps) {
               ))}
             </div>
           )}
+          <div className="border-t border-success/30 pt-3">
+            {savedTemplateId ? (
+              <p className="text-sm text-success" role="status">
+                Saved as a template.
+              </p>
+            ) : showSaveForm ? (
+              <form
+                className="flex flex-col gap-2"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void handleSaveAsTemplate();
+                }}
+              >
+                <label className="text-xs font-medium uppercase tracking-wide text-muted" htmlFor="template-name">
+                  Template name
+                </label>
+                <input
+                  id="template-name"
+                  value={templateName}
+                  onChange={(e) => setTemplateName(e.target.value)}
+                  placeholder={workout.title ?? "My template"}
+                  maxLength={200}
+                  className="h-11 rounded-lg border border-border bg-surface px-3 text-base"
+                />
+                {saveTemplateError && (
+                  <p className="text-sm text-danger" role="alert">
+                    {saveTemplateError}
+                  </p>
+                )}
+                <div className="flex gap-2">
+                  <button
+                    type="submit"
+                    disabled={!templateName.trim() || savingTemplate}
+                    className="h-11 flex-1 rounded-lg bg-accent text-sm font-medium text-white disabled:opacity-50"
+                  >
+                    {savingTemplate ? "Saving…" : "Save template"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowSaveForm(false)}
+                    className="h-11 rounded-lg border border-border px-4 text-sm"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setTemplateName(workout.title ?? "");
+                  setShowSaveForm(true);
+                }}
+                className="h-11 w-full rounded-lg border border-border text-sm font-medium"
+              >
+                Save this workout as a template
+              </button>
+            )}
+          </div>
         </div>
       )}
 

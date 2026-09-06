@@ -15,7 +15,15 @@ if TYPE_CHECKING:
 
 class Workout(Base):
     __tablename__ = "workouts"
-    __table_args__ = (Index("workouts_user_date_idx", "user_id", text("performed_on DESC")),)
+    __table_args__ = (
+        Index("workouts_user_date_idx", "user_id", text("performed_on DESC")),
+        Index(
+            "workouts_user_finished_idx",
+            "user_id",
+            text("performed_on DESC"),
+            postgresql_where=text("ended_at IS NOT NULL"),
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")

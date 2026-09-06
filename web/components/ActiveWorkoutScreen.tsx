@@ -10,6 +10,11 @@ import { RestTimer } from "@/components/RestTimer";
 import { getUnitPreference, type Unit } from "@/lib/units";
 import type { SetRowValues } from "@/components/SetRow";
 import { getExercise, type Exercise } from "@/lib/api/exercises";
+import {
+  listTemplates,
+  startWorkoutFromTemplate,
+  type WorkoutTemplateSummary,
+} from "@/lib/api/templates";
 import { ApiError } from "@/lib/api/errors";
 
 function SyncIndicator({ pendingCount, retrying }: { pendingCount: number; retrying: boolean }) {
@@ -28,6 +33,9 @@ export function ActiveWorkoutScreen() {
   const [restKey, setRestKey] = useState(0);
   const [finishing, setFinishing] = useState(false);
   const [finishError, setFinishError] = useState<string | null>(null);
+  const [templates, setTemplates] = useState<WorkoutTemplateSummary[] | null>(null);
+  const [startingTemplateId, setStartingTemplateId] = useState<string | null>(null);
+  const [templateError, setTemplateError] = useState<string | null>(null);
   const suggestionStartedRef = useRef(false);
 
   useWakeLock(activeWorkout.status === "ready");
@@ -52,6 +60,33 @@ export function ActiveWorkoutScreen() {
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeWorkout.status, suggestParam]);
+
+  useEffect(() => {
+    if (activeWorkout.status !== "none") return;
+    let cancelled = false;
+    listTemplates()
+      .then((data) => {
+        if (!cancelled) setTemplates(data);
+      })
+      .catch(() => {
+        if (!cancelled) setTemplates([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeWorkout.status]);
+
+  async function handleStartFromTemplate(templateId: string) {
+    setStartingTemplateId(templateId);
+    setTemplateError(null);
+    try {
+      const workout = await startWorkoutFromTemplate(templateId);
+      router.push(`/workout?resume=${workout.id}`);
+    } catch (err) {
+      setTemplateError(err instanceof ApiError ? err.message : "Couldn't start from the template");
+      setStartingTemplateId(null);
+    }
+  }
 
   function handleLogSet(workoutExerciseId: string, values: SetRowValues) {
     activeWorkout.addSet(workoutExerciseId, values);
@@ -109,6 +144,35 @@ export function ActiveWorkoutScreen() {
         >
           Start workout
         </button>
+
+        {templates !== null && templates.length > 0 && (
+          <div className="flex w-full max-w-xs flex-col gap-2 pt-2 text-left">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted">
+              Start from a template
+            </p>
+            {templates.map((template) => (
+              <button
+                key={template.id}
+                type="button"
+                disabled={startingTemplateId !== null}
+                onClick={() => void handleStartFromTemplate(template.id)}
+                className="flex h-12 items-center justify-between rounded-lg border border-border px-4 text-sm disabled:opacity-50"
+              >
+                <span className="truncate font-medium">
+                  {template.name} · {template.exercise_count}
+                </span>
+                <span className="text-accent">
+                  {startingTemplateId === template.id ? "Starting…" : "Start"}
+                </span>
+              </button>
+            ))}
+            {templateError && (
+              <p className="text-sm text-danger" role="alert">
+                {templateError}
+              </p>
+            )}
+          </div>
+        )}
       </div>
     );
   }
