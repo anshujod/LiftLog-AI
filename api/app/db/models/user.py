@@ -12,6 +12,7 @@ from app.db.models.enums import UnitPref, unit_pref_enum
 if TYPE_CHECKING:
     from app.db.models.exercise import Exercise
     from app.db.models.workout import Workout
+    from app.db.models.workout_template import WorkoutTemplate
 
 
 class User(Base):
@@ -34,5 +35,8 @@ class User(Base):
         back_populates="user", cascade="all, delete-orphan"
     )
     workouts: Mapped[list["Workout"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
+    workout_templates: Mapped[list["WorkoutTemplate"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )

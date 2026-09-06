@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.core.errors import AuthError, NotFoundError
 from app.core.security import decode_token
 from app.db.models import Exercise, Set, User, Workout, WorkoutExercise
+from app.db.models.workout_template import WorkoutTemplate
 from app.db.session import get_db
 
 _bearer_scheme = HTTPBearer(auto_error=False)
@@ -69,3 +70,14 @@ def get_visible_exercise(
     if exercise is None or is_foreign_custom:
         raise NotFoundError("Exercise not found")
     return exercise
+
+
+def get_owned_template(
+    template_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> WorkoutTemplate:
+    template = db.get(WorkoutTemplate, template_id)
+    if template is None or template.user_id != current_user.id:
+        raise NotFoundError("Template not found")
+    return template

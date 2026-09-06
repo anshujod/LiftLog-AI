@@ -18,6 +18,7 @@ class WorkoutExercise(Base):
     __table_args__ = (
         UniqueConstraint("workout_id", "position"),
         Index("we_exercise_idx", "exercise_id"),
+        Index("we_exercise_workout_idx", "exercise_id", "workout_id"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(

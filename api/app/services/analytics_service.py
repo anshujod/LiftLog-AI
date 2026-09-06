@@ -248,8 +248,8 @@ def get_dashboard(db: Session, user: User) -> DashboardOut:
     all_rows = analytics_repository.get_all_sets_for_user(db, user.id)
     grouped = _group_by_exercise(all_rows)
 
-    top_improving = _top_improving_exercises(grouped, today, unit)
-    recent_prs = _recent_prs(grouped, dashboard_cutoff, unit)
+    top_improving = _top_improving_exercises(grouped, today, user.bodyweight_g, unit)
+    recent_prs = _recent_prs(grouped, dashboard_cutoff, user.bodyweight_g, unit)
     weekly_volume = _weekly_volume(all_rows, today, user.bodyweight_g, unit)
 
     return DashboardOut(
@@ -264,7 +264,10 @@ def get_dashboard(db: Session, user: User) -> DashboardOut:
 
 
 def _top_improving_exercises(
-    grouped: dict[uuid.UUID, list[UserSetRow]], today: date, unit: Unit
+    grouped: dict[uuid.UUID, list[UserSetRow]],
+    today: date,
+    bodyweight_g: int | None,
+    unit: Unit,
 ) -> list[TopImprovingExerciseOut]:
     cutoff = today - timedelta(days=_TOP_IMPROVING_WINDOW_DAYS)
     candidates: list[TopImprovingExerciseOut] = []
@@ -277,7 +280,7 @@ def _top_improving_exercises(
             set_records,
             metric,
             AnalyticsLoadType(exercise.load_type.value),
-            None,
+            bodyweight_g,
             exercise.default_increment_g,
         )
         if isinstance(result, ProgressionResult) and result.direction == "improving":
@@ -295,7 +298,10 @@ def _top_improving_exercises(
 
 
 def _recent_prs(
-    grouped: dict[uuid.UUID, list[UserSetRow]], cutoff: date, unit: Unit
+    grouped: dict[uuid.UUID, list[UserSetRow]],
+    cutoff: date,
+    bodyweight_g: int | None,
+    unit: Unit,
 ) -> list[NewPROut]:
     found: list[NewPROut] = []
 
@@ -305,7 +311,7 @@ def _recent_prs(
         result = compute_prs(
             set_records,
             AnalyticsLoadType(exercise.load_type.value),
-            None,
+            bodyweight_g,
             exercise.default_increment_g,
         )
         found.extend(_recent_prs_for_exercise(result, exercise, cutoff, unit))
