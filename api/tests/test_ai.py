@@ -2,12 +2,16 @@ import ast
 import re
 import uuid
 from pathlib import Path
+from types import SimpleNamespace
 
+import httpx
+import openai
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.ai.providers.openrouter import OpenRouterAIService
 from app.ai.providers.stub import StubAIService
 from app.ai.service import PROMPT_VERSION, get_ai_service, load_system_prompt
 from app.core import config as config_module
@@ -239,3 +243,83 @@ class TestAnalyzeProgressEndpoint:
                 raise AssertionError("expected AIUnavailableError")
         finally:
             config_module.get_settings.cache_clear()
+
+
+def _fake_openai_client(text: str | None = None, error: Exception | None = None) -> SimpleNamespace:
+    class _Completions:
+        def create(self, **kwargs: object) -> SimpleNamespace:
+            if error is not None:
+                raise error
+            message = SimpleNamespace(content=text)
+            return SimpleNamespace(choices=[SimpleNamespace(message=message)])
+
+    return SimpleNamespace(chat=SimpleNamespace(completions=_Completions()))
+
+
+class TestOpenRouterProvider:
+    def test_factory_selects_provider_from_config(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from app.ai.providers.anthropic import AnthropicAIService
+
+        monkeypatch.setenv("AI_API_KEY", "test-key")
+        monkeypatch.setenv("AI_PROVIDER", "openrouter")
+        config_module.get_settings.cache_clear()
+        try:
+            assert isinstance(get_ai_service(), OpenRouterAIService)
+        finally:
+            config_module.get_settings.cache_clear()
+
+        monkeypatch.setenv("AI_PROVIDER", "anthropic")
+        config_module.get_settings.cache_clear()
+        try:
+            assert isinstance(get_ai_service(), AnthropicAIService)
+        finally:
+            config_module.get_settings.cache_clear()
+
+    def test_grounded_summary_through_endpoint(self, db_session: Session) -> None:
+        service = OpenRouterAIService(
+            api_key="test-key",
+            model="test-model",
+            client=_fake_openai_client("Bench Press may be improving, 3 sessions in 90d."),
+        )
+        with TestClient(app) as client:
+            app.dependency_overrides[get_ai_service] = lambda: service
+            try:
+                tokens = _register(client, f"or-{uuid.uuid4()}@example.com")
+                bench_id = _exercise_id(db_session, "Bench Press")
+                for _ in range(3):
+                    _seed_finished_workout(client, tokens, bench_id, [{"load_g": 80000, "reps": 5}])
+                resp = client.post(
+                    "/ai/analyze-progress",
+                    headers=_auth_headers(tokens),
+                    json={"period": "90d"},
+                )
+                assert resp.status_code == 200, resp.text
+                body = resp.json()
+                assert body["insight"]["model"] == "test-model"
+                for number in _numbers(body["insight"]["summary"]):
+                    assert number in resp.text, f"{number} not grounded in payload"
+            finally:
+                app.dependency_overrides.pop(get_ai_service, None)
+
+    def test_auth_failure_maps_to_503(self, db_session: Session) -> None:
+        response = httpx.Response(401, request=httpx.Request("POST", "https://x.test"))
+        service = OpenRouterAIService(
+            api_key="bad-key",
+            model="test-model",
+            client=_fake_openai_client(
+                error=openai.AuthenticationError("unauthorized", response=response, body=None)
+            ),
+        )
+        with TestClient(app) as client:
+            app.dependency_overrides[get_ai_service] = lambda: service
+            try:
+                tokens = _register(client, f"or401-{uuid.uuid4()}@example.com")
+                resp = client.post(
+                    "/ai/analyze-progress",
+                    headers=_auth_headers(tokens),
+                    json={"period": "90d"},
+                )
+                assert resp.status_code == 503
+                assert resp.json()["error"]["code"] == "ai_unavailable"
+            finally:
+                app.dependency_overrides.pop(get_ai_service, None)
