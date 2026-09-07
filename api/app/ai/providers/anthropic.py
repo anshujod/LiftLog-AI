@@ -1,11 +1,16 @@
 import anthropic
+from anthropic.types import Message
 
-from app.ai.payloads import Insight, ProgressAnalysisPayload, Recommendation
+from app.ai.payloads import ChatMessage, Insight, ProgressAnalysisPayload, Recommendation
 from app.ai.service import PROMPT_VERSION, load_system_prompt, utcnow
 from app.core.errors import AIUnavailableError
 
 _MAX_TOKENS = 1024
 _TIMEOUT_SECONDS = 30.0
+
+
+def _text_of(message: Message) -> str:
+    return "".join(block.text for block in message.content if block.type == "text").strip()
 
 
 class AnthropicAIService:
@@ -22,7 +27,26 @@ class AnthropicAIService:
             api_key=api_key, base_url=base_url or None, timeout=_TIMEOUT_SECONDS
         )
         self._model = model
+        self.model_name = model
         self._system = load_system_prompt("analyze_progress")
+
+    def complete(self, system: str, messages: list[ChatMessage]) -> str:
+        try:
+            message = self._client.messages.create(
+                model=self._model,
+                max_tokens=_MAX_TOKENS,
+                system=system,
+                messages=[{"role": m.role, "content": m.content} for m in messages],
+            )
+        except anthropic.AuthenticationError as exc:
+            raise AIUnavailableError("AI analysis is unavailable right now") from exc
+        except (anthropic.APIConnectionError, anthropic.APITimeoutError) as exc:
+            raise AIUnavailableError("AI analysis is unavailable right now") from exc
+        except anthropic.RateLimitError as exc:
+            raise AIUnavailableError("AI analysis is unavailable right now") from exc
+        except anthropic.AnthropicError as exc:
+            raise AIUnavailableError("AI analysis is unavailable right now") from exc
+        return _text_of(message)
 
     def analyze_progress(self, payload: ProgressAnalysisPayload) -> Insight:
         text = self._complete(payload.model_dump_json(indent=2))
@@ -55,7 +79,7 @@ class AnthropicAIService:
             raise AIUnavailableError("AI analysis is unavailable right now") from exc
         except anthropic.AnthropicError as exc:
             raise AIUnavailableError("AI analysis is unavailable right now") from exc
-        text = "".join(block.text for block in message.content if block.type == "text").strip()
+        text = _text_of(message)
         if not text:
             raise AIUnavailableError("AI analysis is unavailable right now")
         return text

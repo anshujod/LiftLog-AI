@@ -17,6 +17,7 @@ api/            FastAPI + SQLAlchemy 2.0 + PostgreSQL backend
     analytics/  pure functions — no I/O, no imports from services or repositories
     routers/    HTTP endpoints
     ai/         LLM interpretation layer, depends only on analytics output
+                (payloads, provider-neutral agent loop, typed data tools)
   alembic/      database migrations
   seeds/        exercise library and fixture data
 web/            Next.js App Router PWA frontend

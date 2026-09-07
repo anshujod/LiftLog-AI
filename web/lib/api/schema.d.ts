@@ -525,6 +525,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ai/chat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Chat */
+        post: operations["chat_ai_chat_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -544,6 +561,32 @@ export interface components {
         AnalyzeProgressOut: {
             insight: components["schemas"]["Insight"];
             payload: components["schemas"]["ProgressAnalysisPayload"];
+        };
+        /** ChatIn */
+        ChatIn: {
+            /** Message */
+            message: string;
+            /** History */
+            history?: components["schemas"]["ChatMessageIn"][];
+        };
+        /** ChatMessageIn */
+        ChatMessageIn: {
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "user" | "assistant";
+            /** Content */
+            content: string;
+        };
+        /** ChatOut */
+        ChatOut: {
+            /** Answer */
+            answer: string;
+            /** Model */
+            model: string;
+            /** Tool Trace */
+            tool_trace: components["schemas"]["ToolCallTraceOut"][];
         };
         /** DashboardOut */
         DashboardOut: {
@@ -1086,6 +1129,21 @@ export interface components {
              * @default bearer
              */
             token_type: string;
+        };
+        /** ToolCallTraceOut */
+        ToolCallTraceOut: {
+            /** Round */
+            round: number;
+            /** Name */
+            name: string;
+            /** Arguments */
+            arguments: {
+                [key: string]: unknown;
+            };
+            /** Result */
+            result: {
+                [key: string]: unknown;
+            };
         };
         /** TopImprovingExerciseOut */
         TopImprovingExerciseOut: {
@@ -2530,6 +2588,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AnalyzeProgressOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    chat_ai_chat_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChatIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatOut"];
                 };
             };
             /** @description Validation Error */

@@ -297,6 +297,13 @@ def _top_improving_exercises(
     return candidates[:_TOP_IMPROVING_LIMIT]
 
 
+def list_prs_since(db: Session, user: User, cutoff: date) -> list[NewPROut]:
+    """Personal records set on or after `cutoff`, newest first. The shared
+    implementation behind the dashboard and the question-answering tools."""
+    grouped = _group_by_exercise(analytics_repository.get_all_sets_for_user(db, user.id))
+    return _recent_prs(grouped, cutoff, user.bodyweight_g, _unit(user))
+
+
 def _recent_prs(
     grouped: dict[uuid.UUID, list[UserSetRow]],
     cutoff: date,
