@@ -65,11 +65,13 @@ export function AnalysisScreen() {
   const [frequency, setFrequency] = useState<BarPoint[] | null>(null);
   const [plateaus, setPlateaus] = useState<Plateau[] | null>(null);
   const [insight, setInsight] = useState<ProgressInsight | null>(null);
-  const [insightLoading, setInsightLoading] = useState(true);
+  const [insightLoading, setInsightLoading] = useState(false);
   const [insightFailed, setInsightFailed] = useState(false);
+  const [insightRequested, setInsightRequested] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  function retryInsight() {
+  function requestInsight() {
+    setInsightRequested(true);
     setInsightLoading(true);
     setInsightFailed(false);
     analyzeProgress("90d")
@@ -86,20 +88,6 @@ export function AnalysisScreen() {
 
   useEffect(() => {
     let cancelled = false;
-
-    analyzeProgress("90d")
-      .then((data) => {
-        if (!cancelled) {
-          setInsight(data.insight);
-          setInsightLoading(false);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setInsightLoading(false);
-          setInsightFailed(true);
-        }
-      });
 
     getMuscleGroupVolume("30d")
       .then((data) => {
@@ -154,13 +142,38 @@ export function AnalysisScreen() {
         {insightLoading && (
           <div className="h-20 animate-pulse rounded-lg bg-surface-raised" aria-busy="true" />
         )}
-        {!insightLoading && insight && <p className="text-sm">{insight.summary}</p>}
-        {!insightLoading && !insight && insightFailed && (
+        {!insightLoading && insight && (
+          <div className="flex flex-col items-start gap-2">
+            <p className="text-sm">{insight.summary}</p>
+            <button
+              type="button"
+              onClick={requestInsight}
+              className="h-9 rounded-lg border border-border px-4 text-sm"
+            >
+              Analyze again
+            </button>
+          </div>
+        )}
+        {!insightLoading && !insightRequested && (
+          <div className="flex flex-col items-start gap-2">
+            <p className="text-sm text-muted">
+              Get an AI-written read of your last 90 days. Uses AI credits.
+            </p>
+            <button
+              type="button"
+              onClick={requestInsight}
+              className="h-11 rounded-lg bg-accent px-5 text-sm font-medium text-white"
+            >
+              Analyze
+            </button>
+          </div>
+        )}
+        {!insightLoading && insightRequested && !insight && insightFailed && (
           <div className="flex flex-col items-start gap-2">
             <p className="text-sm text-muted">AI analysis unavailable right now.</p>
             <button
               type="button"
-              onClick={retryInsight}
+              onClick={requestInsight}
               className="h-9 rounded-lg border border-border px-4 text-sm"
             >
               Retry
