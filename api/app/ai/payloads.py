@@ -82,3 +82,14 @@ class Recommendation(BaseModel):
     headline: str
     explanation: str
     model: str
+
+
+class ChatMessage(BaseModel):
+    """One turn of a chat conversation. The system prompt travels separately;
+    tool exchanges are folded into user-role messages so every provider sees
+    a plain alternating transcript."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    role: Literal["user", "assistant"]
+    content: str

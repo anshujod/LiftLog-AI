@@ -2,7 +2,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Protocol
 
-from app.ai.payloads import Insight, ProgressAnalysisPayload, Recommendation
+from app.ai.payloads import ChatMessage, Insight, ProgressAnalysisPayload, Recommendation
 from app.core.config import get_settings
 from app.core.errors import AIUnavailableError
 
@@ -20,6 +20,9 @@ class AIService(Protocol):
     payloads — never a session, repository, or raw row — so they cannot
     query the database or invent a number that is not in front of them."""
 
+    model_name: str
+
+    def complete(self, system: str, messages: list[ChatMessage]) -> str: ...
     def analyze_progress(self, payload: ProgressAnalysisPayload) -> Insight: ...
     def answer_workout_question(
         self, question: str, payload: ProgressAnalysisPayload
@@ -35,6 +38,11 @@ class UnavailableAIService:
 
     def _unavailable(self) -> AIUnavailableError:
         return AIUnavailableError("AI analysis is unavailable right now")
+
+    model_name = "unavailable"
+
+    def complete(self, system: str, messages: list[ChatMessage]) -> str:
+        raise self._unavailable()
 
     def analyze_progress(self, payload: ProgressAnalysisPayload) -> Insight:
         raise self._unavailable()

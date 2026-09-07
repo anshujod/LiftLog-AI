@@ -2,7 +2,7 @@ from typing import Any
 
 import openai
 
-from app.ai.payloads import Insight, ProgressAnalysisPayload, Recommendation
+from app.ai.payloads import ChatMessage, Insight, ProgressAnalysisPayload, Recommendation
 from app.ai.service import PROMPT_VERSION, load_system_prompt, utcnow
 from app.core.errors import AIUnavailableError
 
@@ -35,7 +35,14 @@ class OpenRouterAIService:
             },
         )
         self._model = model
+        self.model_name = model
         self._system = load_system_prompt("analyze_progress")
+
+    def complete(self, system: str, messages: list[ChatMessage]) -> str:
+        return self._create(
+            [{"role": "system", "content": system}]
+            + [{"role": m.role, "content": m.content} for m in messages]
+        )
 
     def analyze_progress(self, payload: ProgressAnalysisPayload) -> Insight:
         text = self._complete(payload.model_dump_json(indent=2))
@@ -53,14 +60,19 @@ class OpenRouterAIService:
         raise AIUnavailableError("AI analysis is unavailable right now")
 
     def _complete(self, payload_json: str) -> str:
+        return self._create(
+            [
+                {"role": "system", "content": self._system},
+                {"role": "user", "content": payload_json},
+            ]
+        )
+
+    def _create(self, messages: list[dict[str, str]]) -> str:
         try:
             completion = self._client.chat.completions.create(
                 model=self._model,
                 max_tokens=_MAX_TOKENS,
-                messages=[
-                    {"role": "system", "content": self._system},
-                    {"role": "user", "content": payload_json},
-                ],
+                messages=messages,  # type: ignore[arg-type]
             )
         except openai.AuthenticationError as exc:
             raise AIUnavailableError("AI analysis is unavailable right now") from exc
