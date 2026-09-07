@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import get_settings
 from app.core.errors import register_exception_handlers
-from app.routers import analytics, auth, exercises, export, health, me, templates, workouts
+from app.routers import ai, analytics, auth, exercises, export, health, me, templates, workouts
 
 
 def create_app() -> FastAPI:
@@ -28,6 +28,7 @@ def create_app() -> FastAPI:
     app.include_router(templates.router)
     app.include_router(export.router)
     app.include_router(analytics.router)
+    app.include_router(ai.router)
 
     return app
 

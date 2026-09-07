@@ -508,10 +508,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ai/analyze-progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Analyze Progress */
+        post: operations["analyze_progress_ai_analyze_progress_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AnalyzeProgressIn */
+        AnalyzeProgressIn: {
+            /**
+             * Period
+             * @default 90d
+             * @enum {string}
+             */
+            period: "30d" | "90d" | "1y" | "all";
+            /** Exercise Id */
+            exercise_id?: string | null;
+        };
+        /** AnalyzeProgressOut */
+        AnalyzeProgressOut: {
+            insight: components["schemas"]["Insight"];
+            payload: components["schemas"]["ProgressAnalysisPayload"];
+        };
         /** DashboardOut */
         DashboardOut: {
             /** Recent Workouts */
@@ -527,6 +560,20 @@ export interface components {
             current_streak_weeks: number;
             /** Period Days */
             period_days: number;
+        };
+        /** DashboardPayload */
+        DashboardPayload: {
+            /** Period Days */
+            period_days: number;
+            /** Workout Count */
+            workout_count: number;
+            /** Current Streak Weeks */
+            current_streak_weeks: number;
+            weekly_volume: components["schemas"]["WeeklyVolumeOut"];
+            /** Top Improving Exercises */
+            top_improving_exercises: components["schemas"]["TopImprovingExerciseOut"][];
+            /** Recent Prs */
+            recent_prs?: components["schemas"]["NewPROut"][];
         };
         /** E1RMPROut */
         E1RMPROut: {
@@ -587,6 +634,24 @@ export interface components {
             e1rm_pr: components["schemas"]["E1RMPROut"] | null;
             session_volume_pr: components["schemas"]["SessionVolumePROut"] | null;
         };
+        /**
+         * ExerciseProgressPayload
+         * @description Everything the interpreter may say about one exercise.
+         *
+         *     All numbers are precomputed by `analytics/`; the model adds words only.
+         */
+        ExerciseProgressPayload: {
+            /** Exercise Id */
+            exercise_id: string;
+            /** Exercise Name */
+            exercise_name: string;
+            /** Progression Metric */
+            progression_metric: string;
+            progression: components["schemas"]["ProgressionOut"];
+            bests: components["schemas"]["ExercisePRsOut"];
+            /** Recent Sessions */
+            recent_sessions?: components["schemas"]["SessionOut"][];
+        };
         /** ExerciseUpdate */
         ExerciseUpdate: {
             /** Name */
@@ -623,6 +688,24 @@ export interface components {
             sessions: components["schemas"]["SessionOut"][];
             /** Next Cursor */
             next_cursor: string | null;
+        };
+        /**
+         * Insight
+         * @description A model-written interpretation of a payload. Prose only — every figure
+         *     in `summary` must already exist in the payload it was grounded in.
+         */
+        Insight: {
+            /** Summary */
+            summary: string;
+            /** Model */
+            model: string;
+            /** Prompt Version */
+            prompt_version: string;
+            /**
+             * Generated At
+             * Format: date-time
+             */
+            generated_at: string;
         };
         /** LastSessionOut */
         LastSessionOut: {
@@ -734,6 +817,30 @@ export interface components {
             weeks_since_new_best: number;
             /** Improvement Pct */
             improvement_pct: number;
+        };
+        /**
+         * ProgressAnalysisPayload
+         * @description The single grounded context an insight is written from.
+         *
+         *     `unit` is explicit so the interpreter never guesses a unit, and
+         *     `has_sufficient_data` tells it when to decline a trend claim.
+         */
+        ProgressAnalysisPayload: {
+            /**
+             * Unit
+             * @enum {string}
+             */
+            unit: "kg" | "lb";
+            /** Period */
+            period: string;
+            /** Has Sufficient Data */
+            has_sufficient_data: boolean;
+            /** Session Count */
+            session_count: number;
+            focus_exercise?: components["schemas"]["ExerciseProgressPayload"] | null;
+            dashboard: components["schemas"]["DashboardPayload"];
+            /** Plateaus */
+            plateaus: components["schemas"]["PlateauOut"][];
         };
         /**
          * ProgressionMetric
@@ -2399,6 +2506,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PlateauOut"][];
+                };
+            };
+        };
+    };
+    analyze_progress_ai_analyze_progress_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnalyzeProgressIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnalyzeProgressOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

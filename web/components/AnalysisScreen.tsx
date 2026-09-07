@@ -8,6 +8,7 @@ import {
   type MuscleGroupVolume,
   type Plateau,
 } from "@/lib/api/analytics";
+import { analyzeProgress, type ProgressInsight } from "@/lib/api/ai";
 import { listWorkouts, type WorkoutSummary } from "@/lib/api/workouts";
 import { SimpleBarChart, type BarPoint } from "@/components/charts/SimpleBarChart";
 import { ApiError } from "@/lib/api/errors";
@@ -63,10 +64,42 @@ export function AnalysisScreen() {
   const [muscleGroups, setMuscleGroups] = useState<MuscleGroupVolume[] | null>(null);
   const [frequency, setFrequency] = useState<BarPoint[] | null>(null);
   const [plateaus, setPlateaus] = useState<Plateau[] | null>(null);
+  const [insight, setInsight] = useState<ProgressInsight | null>(null);
+  const [insightLoading, setInsightLoading] = useState(true);
+  const [insightFailed, setInsightFailed] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  function retryInsight() {
+    setInsightLoading(true);
+    setInsightFailed(false);
+    analyzeProgress("90d")
+      .then((data) => {
+        setInsight(data.insight);
+        setInsightLoading(false);
+      })
+      .catch(() => {
+        // The AI section is never a hard dependency of this screen.
+        setInsightLoading(false);
+        setInsightFailed(true);
+      });
+  }
 
   useEffect(() => {
     let cancelled = false;
+
+    analyzeProgress("90d")
+      .then((data) => {
+        if (!cancelled) {
+          setInsight(data.insight);
+          setInsightLoading(false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setInsightLoading(false);
+          setInsightFailed(true);
+        }
+      });
 
     getMuscleGroupVolume("30d")
       .then((data) => {
@@ -109,10 +142,42 @@ export function AnalysisScreen() {
     <div className="flex flex-col gap-4 p-4">
       <h1 className="text-2xl font-semibold">Analysis</h1>
 
+      <div className="flex flex-col gap-2 rounded-xl border border-accent/40 bg-surface p-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-medium uppercase tracking-wide text-muted">
+            Training notes
+          </h2>
+          <span className="rounded-full border border-accent/50 px-2 py-0.5 text-xs text-accent">
+            AI interpretation
+          </span>
+        </div>
+        {insightLoading && (
+          <div className="h-20 animate-pulse rounded-lg bg-surface-raised" aria-busy="true" />
+        )}
+        {!insightLoading && insight && <p className="text-sm">{insight.summary}</p>}
+        {!insightLoading && !insight && insightFailed && (
+          <div className="flex flex-col items-start gap-2">
+            <p className="text-sm text-muted">AI analysis unavailable right now.</p>
+            <button
+              type="button"
+              onClick={retryInsight}
+              className="h-9 rounded-lg border border-border px-4 text-sm"
+            >
+              Retry
+            </button>
+          </div>
+        )}
+      </div>
+
       <div className="flex flex-col gap-2 rounded-xl border border-border bg-surface p-4">
-        <h2 className="text-sm font-medium uppercase tracking-wide text-muted">
-          Muscle group volume (30 days)
-        </h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-medium uppercase tracking-wide text-muted">
+            Muscle group volume (30 days)
+          </h2>
+          <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted">
+            Calculated
+          </span>
+        </div>
         {muscleGroups === null && (
           <div className="h-[180px] animate-pulse rounded-lg bg-surface-raised" aria-busy="true" />
         )}
@@ -125,9 +190,14 @@ export function AnalysisScreen() {
       </div>
 
       <div className="flex flex-col gap-2 rounded-xl border border-border bg-surface p-4">
-        <h2 className="text-sm font-medium uppercase tracking-wide text-muted">
-          Workout frequency (12 weeks)
-        </h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-medium uppercase tracking-wide text-muted">
+            Workout frequency (12 weeks)
+          </h2>
+          <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted">
+            Calculated
+          </span>
+        </div>
         {frequency === null && (
           <div className="h-[180px] animate-pulse rounded-lg bg-surface-raised" aria-busy="true" />
         )}
@@ -140,7 +210,12 @@ export function AnalysisScreen() {
       </div>
 
       <div className="flex flex-col gap-2 rounded-xl border border-border bg-surface p-4">
-        <h2 className="text-sm font-medium uppercase tracking-wide text-muted">Plateaus</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-medium uppercase tracking-wide text-muted">Plateaus</h2>
+          <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted">
+            Calculated
+          </span>
+        </div>
         {plateaus === null && (
           <div className="h-16 animate-pulse rounded-lg bg-surface-raised" aria-busy="true" />
         )}

@@ -31,6 +31,11 @@ class ConflictError(AppError):
     code = "conflict"
 
 
+class AIUnavailableError(AppError):
+    status_code = 503
+    code = "ai_unavailable"
+
+
 def _error_body(code: str, message: str) -> dict[str, dict[str, str]]:
     return {"error": {"code": code, "message": message}}
 
