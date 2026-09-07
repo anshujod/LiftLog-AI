@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     ai_api_key: str = ""
     ai_model: str = "claude-sonnet-4-20250514"
     ai_base_url: str = ""
+    ai_provider: str = "anthropic"
     environment: str = "development"
     cors_origins: str = "http://localhost:3000"
 

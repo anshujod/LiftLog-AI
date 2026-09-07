@@ -57,6 +57,12 @@ def get_ai_service() -> AIService:
     settings = get_settings()
     if not settings.ai_api_key:
         return UnavailableAIService()
+    if settings.ai_provider == "openrouter":
+        from app.ai.providers.openrouter import OpenRouterAIService
+
+        return OpenRouterAIService(
+            api_key=settings.ai_api_key, model=settings.ai_model, base_url=settings.ai_base_url
+        )
     from app.ai.providers.anthropic import AnthropicAIService
 
     return AnthropicAIService(
