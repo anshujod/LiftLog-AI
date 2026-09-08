@@ -2,7 +2,14 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Protocol
 
-from app.ai.payloads import ChatMessage, Insight, ProgressAnalysisPayload, Recommendation
+from app.ai.payloads import (
+    ChatMessage,
+    Insight,
+    ProgressAnalysisPayload,
+    Recommendation,
+    RecommendationPayload,
+    TrainingSummaryPayload,
+)
 from app.core.config import get_settings
 from app.core.errors import AIUnavailableError
 
@@ -27,8 +34,8 @@ class AIService(Protocol):
     def answer_workout_question(
         self, question: str, payload: ProgressAnalysisPayload
     ) -> Insight: ...
-    def recommend_workout(self, payload: ProgressAnalysisPayload) -> Recommendation: ...
-    def summarize_training(self, payload: ProgressAnalysisPayload) -> Insight: ...
+    def recommend_workout(self, payload: RecommendationPayload) -> Recommendation: ...
+    def summarize_training(self, payload: TrainingSummaryPayload) -> Insight: ...
 
 
 class UnavailableAIService:
@@ -50,10 +57,10 @@ class UnavailableAIService:
     def answer_workout_question(self, question: str, payload: ProgressAnalysisPayload) -> Insight:
         raise self._unavailable()
 
-    def recommend_workout(self, payload: ProgressAnalysisPayload) -> Recommendation:
+    def recommend_workout(self, payload: RecommendationPayload) -> Recommendation:
         raise self._unavailable()
 
-    def summarize_training(self, payload: ProgressAnalysisPayload) -> Insight:
+    def summarize_training(self, payload: TrainingSummaryPayload) -> Insight:
         raise self._unavailable()
 
 

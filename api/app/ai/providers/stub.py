@@ -2,7 +2,14 @@ import json
 import re
 from typing import Any
 
-from app.ai.payloads import ChatMessage, Insight, ProgressAnalysisPayload, Recommendation
+from app.ai.payloads import (
+    ChatMessage,
+    Insight,
+    ProgressAnalysisPayload,
+    Recommendation,
+    RecommendationPayload,
+    TrainingSummaryPayload,
+)
 from app.ai.service import PROMPT_VERSION, utcnow
 from app.core.errors import AIUnavailableError
 
@@ -65,11 +72,17 @@ class StubAIService:
     def answer_workout_question(self, question: str, payload: ProgressAnalysisPayload) -> Insight:
         raise AIUnavailableError("AI analysis is unavailable right now")
 
-    def recommend_workout(self, payload: ProgressAnalysisPayload) -> Recommendation:
-        raise AIUnavailableError("AI analysis is unavailable right now")
+    def recommend_workout(self, payload: RecommendationPayload) -> Recommendation:
+        summary = _recommend_summary(payload)
+        return Recommendation(headline=summary[:160], explanation=summary, model=self._model)
 
-    def summarize_training(self, payload: ProgressAnalysisPayload) -> Insight:
-        return self.analyze_progress(payload)
+    def summarize_training(self, payload: TrainingSummaryPayload) -> Insight:
+        return Insight(
+            summary=_observe_week(payload),
+            model=self._model,
+            prompt_version=PROMPT_VERSION,
+            generated_at=utcnow(),
+        )
 
 
 def _summarize(payload: ProgressAnalysisPayload) -> str:
@@ -78,7 +91,7 @@ def _summarize(payload: ProgressAnalysisPayload) -> str:
         return (
             f"There is not enough logged training in this {payload.period} window "
             f"({payload.session_count} sessions) to describe a trend. "
-            "Consider logging at least 3 sessions for an exercise before reading "
+            "Consider logging a few more sessions for an exercise before reading "
             "much into its direction."
         )
 
@@ -237,7 +250,7 @@ def _format_tool_result(tool: str, result: dict[str, Any], question: str) -> str
             return "No personal records in that window."
         first = prs[0]
         return (
-            f"{len(prs)} recent PRs, latest {first.get('exercise_name')} "
+            f"Latest {first.get('exercise_name')} "
             f"{first.get('value', {}).get('display', '')} on {first.get('performed_on')}."
         )
     if tool == "detect_plateaus":
@@ -263,10 +276,7 @@ def _format_tool_result(tool: str, result: dict[str, Any], question: str) -> str
         if not workouts:
             return "No workouts logged yet."
         first = workouts[0]
-        return (
-            f"{len(workouts)} recent workouts, latest "
-            f"'{first.get('title') or 'Workout'}' on {first.get('performed_on')}."
-        )
+        return f"Latest '{first.get('title') or 'Workout'}' on {first.get('performed_on')}."
     if tool == "get_volume":
         volume = result.get("volume", {})
         return f"{result.get('muscle_group_name')} volume is {volume.get('display', '')}."
@@ -294,3 +304,46 @@ def _format_history(result: dict[str, Any], question: str) -> str:
         f"top set {heaviest.get('load', {}).get('display', '')} "
         f"for {heaviest.get('reps')} reps."
     )
+
+
+def _recommend_summary(payload: RecommendationPayload) -> str:
+    if not payload.suggested_sets:
+        return (
+            f"Log {payload.exercise_name} first — a recent working set is needed "
+            "before suggesting loads."
+        )
+    first = payload.suggested_sets[0]
+    summary = (
+        f"Suggestion for {payload.exercise_name}, not instruction: consider "
+        f"{payload.set_count} sets of {first.load_display} × {first.reps}."
+    )
+    if payload.last_top_set is not None:
+        top = payload.last_top_set
+        summary += (
+            f" Your top recent set was {top.load_display} × {top.reps}, "
+            "which may support this step."
+        )
+    return summary
+
+
+def _observe_week(payload: TrainingSummaryPayload) -> str:
+    if payload.workouts_completed == 0:
+        return (
+            f"Quiet week starting {payload.week_start} — no finished workouts "
+            "logged, so there is nothing to observe yet."
+        )
+    observation = (
+        f"Week of {payload.week_start}: {payload.workouts_completed} workouts, "
+        f"{payload.total_volume_display} total."
+    )
+    if payload.changes:
+        change = payload.changes[0]
+        direction = "up" if (change.percent_change or 0) >= 0 else "down"
+        observation += (
+            f" {change.exercise_name} moved {direction} from {change.previous_display} "
+            f"to {change.current_display}."
+        )
+    if payload.new_prs:
+        observation += f" New bests include {payload.new_prs[0]}."
+    observation += " That may reflect steady training — consider whether recovery kept up."
+    return observation

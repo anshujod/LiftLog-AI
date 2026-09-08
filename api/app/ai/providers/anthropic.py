@@ -1,7 +1,14 @@
 import anthropic
 from anthropic.types import Message
 
-from app.ai.payloads import ChatMessage, Insight, ProgressAnalysisPayload, Recommendation
+from app.ai.payloads import (
+    ChatMessage,
+    Insight,
+    ProgressAnalysisPayload,
+    Recommendation,
+    RecommendationPayload,
+    TrainingSummaryPayload,
+)
 from app.ai.service import PROMPT_VERSION, load_system_prompt, utcnow
 from app.core.errors import AIUnavailableError
 
@@ -31,22 +38,7 @@ class AnthropicAIService:
         self._system = load_system_prompt("analyze_progress")
 
     def complete(self, system: str, messages: list[ChatMessage]) -> str:
-        try:
-            message = self._client.messages.create(
-                model=self._model,
-                max_tokens=_MAX_TOKENS,
-                system=system,
-                messages=[{"role": m.role, "content": m.content} for m in messages],
-            )
-        except anthropic.AuthenticationError as exc:
-            raise AIUnavailableError("AI analysis is unavailable right now") from exc
-        except (anthropic.APIConnectionError, anthropic.APITimeoutError) as exc:
-            raise AIUnavailableError("AI analysis is unavailable right now") from exc
-        except anthropic.RateLimitError as exc:
-            raise AIUnavailableError("AI analysis is unavailable right now") from exc
-        except anthropic.AnthropicError as exc:
-            raise AIUnavailableError("AI analysis is unavailable right now") from exc
-        return _text_of(message)
+        return self._create(system, [{"role": m.role, "content": m.content} for m in messages])
 
     def analyze_progress(self, payload: ProgressAnalysisPayload) -> Insight:
         text = self._complete(payload.model_dump_json(indent=2))
@@ -57,19 +49,31 @@ class AnthropicAIService:
     def answer_workout_question(self, question: str, payload: ProgressAnalysisPayload) -> Insight:
         raise AIUnavailableError("AI analysis is unavailable right now")
 
-    def recommend_workout(self, payload: ProgressAnalysisPayload) -> Recommendation:
-        raise AIUnavailableError("AI analysis is unavailable right now")
+    def recommend_workout(self, payload: RecommendationPayload) -> Recommendation:
+        text = self._create(
+            load_system_prompt("recommend"),
+            [{"role": "user", "content": payload.model_dump_json(indent=2)}],
+        )
+        return Recommendation(
+            headline=text.split("\n")[0][:160], explanation=text, model=self._model
+        )
 
-    def summarize_training(self, payload: ProgressAnalysisPayload) -> Insight:
-        raise AIUnavailableError("AI analysis is unavailable right now")
+    def summarize_training(self, payload: TrainingSummaryPayload) -> Insight:
+        text = self._create(
+            load_system_prompt("weekly_observation"),
+            [{"role": "user", "content": payload.model_dump_json(indent=2)}],
+        )
+        return Insight(
+            summary=text, model=self._model, prompt_version=PROMPT_VERSION, generated_at=utcnow()
+        )
 
-    def _complete(self, payload_json: str) -> str:
+    def _create(self, system: str, messages: list[dict[str, str]]) -> str:
         try:
             message = self._client.messages.create(
                 model=self._model,
                 max_tokens=_MAX_TOKENS,
-                system=self._system,
-                messages=[{"role": "user", "content": payload_json}],
+                system=system,
+                messages=messages,  # type: ignore[arg-type]
             )
         except anthropic.AuthenticationError as exc:
             raise AIUnavailableError("AI analysis is unavailable right now") from exc
@@ -83,3 +87,6 @@ class AnthropicAIService:
         if not text:
             raise AIUnavailableError("AI analysis is unavailable right now")
         return text
+
+    def _complete(self, payload_json: str) -> str:
+        return self._create(self._system, [{"role": "user", "content": payload_json}])

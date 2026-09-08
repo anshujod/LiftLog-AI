@@ -2,7 +2,14 @@ from typing import Any
 
 import openai
 
-from app.ai.payloads import ChatMessage, Insight, ProgressAnalysisPayload, Recommendation
+from app.ai.payloads import (
+    ChatMessage,
+    Insight,
+    ProgressAnalysisPayload,
+    Recommendation,
+    RecommendationPayload,
+    TrainingSummaryPayload,
+)
 from app.ai.service import PROMPT_VERSION, load_system_prompt, utcnow
 from app.core.errors import AIUnavailableError
 
@@ -53,11 +60,27 @@ class OpenRouterAIService:
     def answer_workout_question(self, question: str, payload: ProgressAnalysisPayload) -> Insight:
         raise AIUnavailableError("AI analysis is unavailable right now")
 
-    def recommend_workout(self, payload: ProgressAnalysisPayload) -> Recommendation:
-        raise AIUnavailableError("AI analysis is unavailable right now")
+    def recommend_workout(self, payload: RecommendationPayload) -> Recommendation:
+        text = self._create(
+            [
+                {"role": "system", "content": load_system_prompt("recommend")},
+                {"role": "user", "content": payload.model_dump_json(indent=2)},
+            ]
+        )
+        return Recommendation(
+            headline=text.split("\n")[0][:160], explanation=text, model=self._model
+        )
 
-    def summarize_training(self, payload: ProgressAnalysisPayload) -> Insight:
-        raise AIUnavailableError("AI analysis is unavailable right now")
+    def summarize_training(self, payload: TrainingSummaryPayload) -> Insight:
+        text = self._create(
+            [
+                {"role": "system", "content": load_system_prompt("weekly_observation")},
+                {"role": "user", "content": payload.model_dump_json(indent=2)},
+            ]
+        )
+        return Insight(
+            summary=text, model=self._model, prompt_version=PROMPT_VERSION, generated_at=utcnow()
+        )
 
     def _complete(self, payload_json: str) -> str:
         return self._create(

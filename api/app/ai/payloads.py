@@ -93,3 +93,71 @@ class ChatMessage(BaseModel):
 
     role: Literal["user", "assistant"]
     content: str
+
+
+class SuggestedSet(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    load_g: int
+    reps: int
+
+
+class SuggestedSetOut(BaseModel):
+    """One scheme row with its display string included, so interpreters can
+    echo it verbatim instead of converting units themselves."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    load_g: int
+    reps: int
+    load_display: str
+
+
+class LastTopSet(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    load_g: int
+    load_display: str
+    reps: int
+
+
+class RecommendationPayload(BaseModel):
+    """Grounded context for a set suggestion. The scheme in `suggested_sets`
+    is computed deterministically by `analytics/`; the model only explains it
+    and must echo its numbers verbatim."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    unit: UnitName
+    exercise_id: str
+    exercise_name: str
+    progression_metric: str
+    set_count: int
+    suggested_sets: list[SuggestedSetOut]
+    last_top_set: LastTopSet | None = None
+    progression_direction: str | None = None
+    progression_percent: float | None = None
+
+
+class WeekExerciseChange(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    exercise_name: str
+    metric: str
+    previous_display: str
+    current_display: str
+    percent_change: float | None = None
+
+
+class TrainingSummaryPayload(BaseModel):
+    """One ISO week of training, precomputed. The model writes a single
+    observation from it; every figure must already be present below."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    unit: UnitName
+    week_start: str
+    workouts_completed: int
+    total_volume_display: str
+    changes: list[WeekExerciseChange]
+    new_prs: list[str]
