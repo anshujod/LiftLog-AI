@@ -30,7 +30,8 @@ jobs:
           --health-retries 10
     env:
       DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/liftlog_test
-      AUTH_SECRET: ci-test-secret
+      # No AUTH_SECRET here: tests default it via conftest, and hardcoded
+      # secrets in workflow files trip secret scanners.
       # Shared CI runners are slower than a dev machine: the perf suite is a
       # regression tripwire here, while the 300ms product budget is enforced
       # by local runs (see tests/test_performance.py).

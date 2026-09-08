@@ -108,12 +108,20 @@ jobs:
           docker compose logs
           exit 1
 
+      - name: Run database migrations
+        # The api image boots straight into uvicorn (migrations are a separate
+        # step in local dev too — see `make migrate`), so a fresh CI volume
+        # has no tables until we migrate explicitly.
+        run: docker compose exec -T api uv run alembic upgrade head
+
       - name: Seed exercise library
+        # Credentials come from the api service's own DATABASE_URL — never
+        # hardcode them in the workflow, secret scanners flag that.
         run: >
           docker compose exec -T api uv run python -c
-          "from sqlalchemy import create_engine; from sqlalchemy.orm import sessionmaker;
+          "import os; from sqlalchemy import create_engine; from sqlalchemy.orm import sessionmaker;
           from seeds.seed import run_seed;
-          e = create_engine('postgresql+psycopg://liftlog:liftlog@db:5432/liftlog');
+          e = create_engine(os.environ['DATABASE_URL']);
           S = sessionmaker(bind=e);
           s = S(); run_seed(s); s.commit(); print('seeded')"
 
