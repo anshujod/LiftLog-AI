@@ -1,3 +1,4 @@
+import logging
 import os
 from pathlib import Path
 
@@ -7,6 +8,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from alembic import command
+from app.core import rate_limit as _rate_limit
 
 API_DIR = Path(__file__).resolve().parent.parent
 DB_HOST_URL = "postgresql+psycopg://liftlog:liftlog@localhost:5434"
@@ -15,6 +17,19 @@ TEST_DB_URL = f"{DB_HOST_URL}/{TEST_DB_NAME}"
 
 os.environ.setdefault("DATABASE_URL", TEST_DB_URL)
 os.environ.setdefault("AUTH_SECRET", "test-secret")
+
+# Rate limiting is disabled suite-wide: hundreds of tests share one process
+# and would otherwise exhaust the per-minute budgets. The dedicated rate
+# limit tests re-enable it with a reset store (see test_security.py).
+
+
+@pytest.fixture(autouse=True)
+def _disable_rate_limits():
+    _rate_limit.set_enabled(False)
+    _rate_limit.reset()
+    yield
+    _rate_limit.set_enabled(False)
+    _rate_limit.reset()
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -29,6 +44,11 @@ def test_db_url() -> str:
     alembic_cfg.set_main_option("sqlalchemy.url", TEST_DB_URL)
     alembic_cfg.attributes["configure_logger"] = False
     command.upgrade(alembic_cfg, "head")
+
+    # alembic's fileConfig disables every existing logger as a side effect,
+    # which would silence the access log under test. Re-enable our namespace.
+    logging.getLogger("liftlog").disabled = False
+    logging.getLogger("liftlog.access").disabled = False
 
     from seeds.seed import run_seed
 
