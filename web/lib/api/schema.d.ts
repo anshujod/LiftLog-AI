@@ -542,6 +542,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ai/workout-recommendation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Workout Recommendation */
+        post: operations["workout_recommendation_ai_workout_recommendation_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/weekly-summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Weekly Summary */
+        get: operations["weekly_summary_ai_weekly_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -707,6 +741,19 @@ export interface components {
             default_increment_g?: number | null;
             /** Is Active */
             is_active?: boolean | null;
+        };
+        /** ExerciseWeekChangeOut */
+        ExerciseWeekChangeOut: {
+            /** Exercise Name */
+            exercise_name: string;
+            /** Metric */
+            metric: string;
+            /** Previous Display */
+            previous_display: string;
+            /** Current Display */
+            current_display: string;
+            /** Percent Change */
+            percent_change: number | null;
         };
         /** FinishSummaryOut */
         FinishSummaryOut: {
@@ -1015,6 +1062,12 @@ export interface components {
             /** Notes */
             notes: string | null;
         };
+        /** SetSuggestionOut */
+        SetSuggestionOut: {
+            load: components["schemas"]["LoadValue"];
+            /** Reps */
+            reps: number;
+        };
         /** SetUpdate */
         SetUpdate: {
             /** Load G */
@@ -1208,6 +1261,32 @@ export interface components {
             period_start: string;
             volume: components["schemas"]["LoadValue"];
         };
+        /** WeekSummaryOut */
+        WeekSummaryOut: {
+            /**
+             * Week Start
+             * Format: date
+             */
+            week_start: string;
+            /**
+             * Week End
+             * Format: date
+             */
+            week_end: string;
+            /** Workouts Completed */
+            workouts_completed: number;
+            total_volume: components["schemas"]["LoadValue"];
+            /** Changes */
+            changes: components["schemas"]["ExerciseWeekChangeOut"][];
+            /** New Prs */
+            new_prs: components["schemas"]["NewPROut"][];
+            /** Observation */
+            observation: string | null;
+            /** Model */
+            model: string | null;
+            /** Cached */
+            cached: boolean;
+        };
         /** WeeklyVolumeOut */
         WeeklyVolumeOut: {
             current_week: components["schemas"]["LoadValue"];
@@ -1294,6 +1373,30 @@ export interface components {
             notes: string | null;
             /** Workout Exercises */
             workout_exercises: components["schemas"]["WorkoutExerciseOut"][];
+        };
+        /** WorkoutRecommendationIn */
+        WorkoutRecommendationIn: {
+            /**
+             * Exercise Id
+             * Format: uuid
+             */
+            exercise_id: string;
+        };
+        /** WorkoutRecommendationOut */
+        WorkoutRecommendationOut: {
+            /**
+             * Exercise Id
+             * Format: uuid
+             */
+            exercise_id: string;
+            /** Exercise Name */
+            exercise_name: string;
+            /** Suggested Sets */
+            suggested_sets: components["schemas"]["SetSuggestionOut"][];
+            /** Explanation */
+            explanation: string;
+            /** Model */
+            model: string;
         };
         /** WorkoutSummaryOut */
         WorkoutSummaryOut: {
@@ -2630,6 +2733,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    workout_recommendation_ai_workout_recommendation_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkoutRecommendationIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkoutRecommendationOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    weekly_summary_ai_weekly_summary_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WeekSummaryOut"];
                 };
             };
         };

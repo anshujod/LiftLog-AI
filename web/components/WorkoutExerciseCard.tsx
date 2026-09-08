@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { LastSessionPanel } from "@/components/LastSessionPanel";
 import { SetRow, type SetRowValues } from "@/components/SetRow";
+import { SuggestionCard } from "@/components/SuggestionCard";
 import type { DisplayExercise } from "@/hooks/useActiveWorkout";
 import type { Unit } from "@/lib/units";
 
@@ -64,6 +65,8 @@ export function WorkoutExerciseCard({
       </div>
 
       {showLastSession && <LastSessionPanel exerciseId={exercise.id} />}
+
+      <SuggestionCard exerciseId={exercise.id} exerciseName={exercise.name} />
 
       <div className="flex flex-col divide-y divide-border">
         {sets.map((set) => (

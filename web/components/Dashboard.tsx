@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useActiveWorkoutId } from "@/hooks/useActiveWorkoutId";
 import { getDashboard, type Dashboard as DashboardData } from "@/lib/api/analytics";
+import { weeklySummary, type WeekSummary } from "@/lib/api/ai";
 import { getWorkout, listWorkouts } from "@/lib/api/workouts";
 import { getLastSession } from "@/lib/api/exercises";
 import { ApiError } from "@/lib/api/errors";
@@ -73,6 +74,21 @@ export function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [suggestion, setSuggestion] = useState<Suggestion | null>(null);
+  const [weekReview, setWeekReview] = useState<WeekSummary | null>(null);
+  const [weekLoading, setWeekLoading] = useState(false);
+  const [weekFailed, setWeekFailed] = useState(false);
+
+  async function loadWeekReview() {
+    setWeekLoading(true);
+    setWeekFailed(false);
+    try {
+      setWeekReview(await weeklySummary());
+    } catch {
+      setWeekFailed(true);
+    } finally {
+      setWeekLoading(false);
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -212,6 +228,75 @@ export function Dashboard() {
           </div>
         </SectionCard>
       )}
+
+      <SectionCard title="Week in review">
+        {!weekReview && !weekLoading && !weekFailed && (
+          <div className="flex flex-col items-start gap-2">
+            <p className="text-sm text-muted">
+              Workouts, volume, PRs, and one AI observation for this week. Uses AI credits.
+            </p>
+            <button
+              type="button"
+              onClick={() => void loadWeekReview()}
+              className="h-11 rounded-lg bg-accent px-5 text-sm font-medium text-white"
+            >
+              Review my week
+            </button>
+          </div>
+        )}
+        {weekLoading && (
+          <div className="h-24 animate-pulse rounded-lg bg-surface-raised" aria-busy="true" />
+        )}
+        {weekFailed && (
+          <div className="flex flex-col items-start gap-2">
+            <p className="text-sm text-muted">Week review unavailable right now.</p>
+            <button
+              type="button"
+              onClick={() => void loadWeekReview()}
+              className="h-9 rounded-lg border border-border px-4 text-sm"
+            >
+              Retry
+            </button>
+          </div>
+        )}
+        {weekReview && (
+          <div className="flex flex-col gap-2 text-sm">
+            <div className="grid grid-cols-2 gap-2 text-center">
+              <Stat label="Workouts" value={String(weekReview.workouts_completed)} />
+              <Stat label="Volume" value={weekReview.total_volume.display} />
+            </div>
+            {weekReview.changes.length > 0 && (
+              <ul className="flex flex-col gap-1">
+                {weekReview.changes.map((change) => (
+                  <li key={change.exercise_name} className="flex items-center justify-between">
+                    <span>{change.exercise_name}</span>
+                    <span className="tabular-nums text-muted">
+                      {change.previous_display} → {change.current_display}
+                      {change.percent_change !== null && ` (${change.percent_change}%)`}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {weekReview.new_prs.length > 0 && (
+              <div className="flex flex-col gap-1">
+                {weekReview.new_prs.map((pr) => (
+                  <p key={`${pr.exercise_id}-${pr.pr_type}`} className="text-sm">
+                    🏆 {pr.exercise_name} — {pr.value.display}
+                    {pr.reps ? ` × ${pr.reps}` : ""}
+                  </p>
+                ))}
+              </div>
+            )}
+            {weekReview.observation ? (
+              <p>{weekReview.observation}</p>
+            ) : (
+              <p className="text-muted">AI observation unavailable — numbers above are exact.</p>
+            )}
+            {weekReview.cached && <p className="text-xs text-muted">Saved from earlier.</p>}
+          </div>
+        )}
+      </SectionCard>
 
       <Link href="/analysis" className="text-center text-sm text-accent">
         See full analysis →

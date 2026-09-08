@@ -1,9 +1,12 @@
 import uuid
+from datetime import date
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.ai.payloads import Insight, ProgressAnalysisPayload
+from app.schemas.load import LoadValue
+from app.schemas.workout import NewPROut
 from app.services.analytics_service import Period
 
 
@@ -46,3 +49,42 @@ class ChatOut(BaseModel):
     answer: str
     model: str
     tool_trace: list[ToolCallTraceOut]
+
+
+class WorkoutRecommendationIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    exercise_id: uuid.UUID
+
+
+class SetSuggestionOut(BaseModel):
+    load: LoadValue
+    reps: int
+
+
+class WorkoutRecommendationOut(BaseModel):
+    exercise_id: uuid.UUID
+    exercise_name: str
+    suggested_sets: list[SetSuggestionOut]
+    explanation: str
+    model: str
+
+
+class ExerciseWeekChangeOut(BaseModel):
+    exercise_name: str
+    metric: str
+    previous_display: str
+    current_display: str
+    percent_change: float | None
+
+
+class WeekSummaryOut(BaseModel):
+    week_start: date
+    week_end: date
+    workouts_completed: int
+    total_volume: LoadValue
+    changes: list[ExerciseWeekChangeOut]
+    new_prs: list[NewPROut]
+    observation: str | None
+    model: str | None
+    cached: bool
