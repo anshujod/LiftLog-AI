@@ -15,7 +15,11 @@ router = APIRouter(tags=["exercises"])
 
 
 @router.get("/muscle-groups", response_model=list[MuscleGroupOut])
-def list_muscle_groups(db: Session = Depends(get_db)) -> list[MuscleGroup]:
+def list_muscle_groups(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> list[MuscleGroup]:
+    _ = current_user  # authentication only; muscle groups are shared reference data
     return exercise_service.list_muscle_groups(db)
 
 

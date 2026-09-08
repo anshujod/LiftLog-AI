@@ -1,5 +1,6 @@
 from functools import lru_cache
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -14,6 +15,14 @@ class Settings(BaseSettings):
     ai_provider: str = "anthropic"
     environment: str = "development"
     cors_origins: str = "http://localhost:3000"
+
+    @field_validator("cors_origins")
+    @classmethod
+    def _reject_wildcard_origin(cls, value: str) -> str:
+        origins = [origin.strip() for origin in value.split(",") if origin.strip()]
+        if "*" in origins:
+            raise ValueError("CORS_ORIGINS must list explicit origins, never '*'")
+        return value
 
     @property
     def cors_origin_list(self) -> list[str]:
