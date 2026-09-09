@@ -1,4 +1,6 @@
 import ast
+import json
+import logging
 import re
 import uuid
 from pathlib import Path
@@ -323,3 +325,60 @@ class TestOpenRouterProvider:
                 assert resp.json()["error"]["code"] == "ai_unavailable"
             finally:
                 app.dependency_overrides.pop(get_ai_service, None)
+
+
+def _fake_openai_client_with_usage(
+    text: str, prompt_tokens: int | None, completion_tokens: int | None
+) -> SimpleNamespace:
+    class _Completions:
+        def create(self, **kwargs: object) -> SimpleNamespace:
+            message = SimpleNamespace(content=text)
+            choices = [SimpleNamespace(message=message)]
+            if prompt_tokens is None and completion_tokens is None:
+                return SimpleNamespace(choices=choices)
+            return SimpleNamespace(
+                choices=choices,
+                usage=SimpleNamespace(
+                    prompt_tokens=prompt_tokens, completion_tokens=completion_tokens
+                ),
+            )
+
+    return SimpleNamespace(chat=SimpleNamespace(completions=_Completions()))
+
+
+class TestUsageLogging:
+    def test_llm_call_logs_tokens_per_operation(self, caplog: pytest.LogCaptureFixture) -> None:
+        from app.ai.payloads import ChatMessage
+
+        service = OpenRouterAIService(
+            api_key="test-key",
+            model="test-model",
+            client=_fake_openai_client_with_usage("hello", 10, 5),
+        )
+        with caplog.at_level(logging.INFO, logger="liftlog.ai"):
+            assert service.complete("sys", [ChatMessage(role="user", content="hi")]) == "hello"
+        records = [r for r in caplog.records if r.name == "liftlog.ai"]
+        assert len(records) == 1
+        event = json.loads(records[0].getMessage())
+        assert event == {
+            "event": "llm_usage",
+            "provider": "openrouter",
+            "model": "test-model",
+            "operation": "chat",
+            "input_tokens": 10,
+            "output_tokens": 5,
+        }
+
+    def test_missing_usage_does_not_break_the_call(self, caplog: pytest.LogCaptureFixture) -> None:
+        from app.ai.payloads import ChatMessage
+
+        service = OpenRouterAIService(
+            api_key="test-key",
+            model="test-model",
+            client=_fake_openai_client_with_usage("hello", None, None),
+        )
+        with caplog.at_level(logging.INFO, logger="liftlog.ai"):
+            assert service.complete("sys", [ChatMessage(role="user", content="hi")]) == "hello"
+        events = [json.loads(r.getMessage()) for r in caplog.records if r.name == "liftlog.ai"]
+        assert events[0]["input_tokens"] is None
+        assert events[0]["output_tokens"] is None

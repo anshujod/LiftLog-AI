@@ -17,6 +17,9 @@ services:
 
   api:
     build: ./api
+    # Local development keeps --reload; production uses the image CMD
+    # (start.sh: migrate, then serve without reload).
+    command: uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     env_file:
       - ./api/.env
     environment:

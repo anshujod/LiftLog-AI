@@ -51,8 +51,11 @@ def test_db_url() -> str:
 
     # alembic's fileConfig disables every existing logger as a side effect,
     # which would silence the access log under test. Re-enable our namespace.
-    logging.getLogger("liftlog").disabled = False
-    logging.getLogger("liftlog.access").disabled = False
+    for name, existing in logging.Logger.manager.loggerDict.items():
+        if (name == "liftlog" or name.startswith("liftlog.")) and isinstance(
+            existing, logging.Logger
+        ):
+            existing.disabled = False
 
     from seeds.seed import run_seed
 

@@ -10,6 +10,7 @@ from app.ai.payloads import (
     TrainingSummaryPayload,
 )
 from app.ai.service import PROMPT_VERSION, load_system_prompt, utcnow
+from app.ai.usage import log_llm_usage
 from app.core.errors import AIUnavailableError
 
 _MAX_TOKENS = 1024
@@ -38,10 +39,14 @@ class AnthropicAIService:
         self._system = load_system_prompt("analyze_progress")
 
     def complete(self, system: str, messages: list[ChatMessage]) -> str:
-        return self._create(system, [{"role": m.role, "content": m.content} for m in messages])
+        return self._create(
+            system,
+            [{"role": m.role, "content": m.content} for m in messages],
+            operation="chat",
+        )
 
     def analyze_progress(self, payload: ProgressAnalysisPayload) -> Insight:
-        text = self._complete(payload.model_dump_json(indent=2))
+        text = self._complete(payload.model_dump_json(indent=2), operation="analyze_progress")
         return Insight(
             summary=text, model=self._model, prompt_version=PROMPT_VERSION, generated_at=utcnow()
         )
@@ -53,6 +58,7 @@ class AnthropicAIService:
         text = self._create(
             load_system_prompt("recommend"),
             [{"role": "user", "content": payload.model_dump_json(indent=2)}],
+            operation="recommend_workout",
         )
         return Recommendation(
             headline=text.split("\n")[0][:160], explanation=text, model=self._model
@@ -62,12 +68,13 @@ class AnthropicAIService:
         text = self._create(
             load_system_prompt("weekly_observation"),
             [{"role": "user", "content": payload.model_dump_json(indent=2)}],
+            operation="summarize_training",
         )
         return Insight(
             summary=text, model=self._model, prompt_version=PROMPT_VERSION, generated_at=utcnow()
         )
 
-    def _create(self, system: str, messages: list[dict[str, str]]) -> str:
+    def _create(self, system: str, messages: list[dict[str, str]], operation: str = "chat") -> str:
         try:
             message = self._client.messages.create(
                 model=self._model,
@@ -83,10 +90,21 @@ class AnthropicAIService:
             raise AIUnavailableError("AI analysis is unavailable right now") from exc
         except anthropic.AnthropicError as exc:
             raise AIUnavailableError("AI analysis is unavailable right now") from exc
+        # usage is absent on test fakes — never let metering break the call.
+        usage = getattr(message, "usage", None)
+        log_llm_usage(
+            provider="anthropic",
+            model=self._model,
+            operation=operation,
+            input_tokens=getattr(usage, "input_tokens", None),
+            output_tokens=getattr(usage, "output_tokens", None),
+        )
         text = _text_of(message)
         if not text:
             raise AIUnavailableError("AI analysis is unavailable right now")
         return text
 
-    def _complete(self, payload_json: str) -> str:
-        return self._create(self._system, [{"role": "user", "content": payload_json}])
+    def _complete(self, payload_json: str, operation: str = "analyze_progress") -> str:
+        return self._create(
+            self._system, [{"role": "user", "content": payload_json}], operation=operation
+        )
