@@ -105,7 +105,9 @@ export class SyncQueue {
 
   private persist(): void {
     persistQueue(this.workoutId, this.queue);
-    this.callbacks.onQueueChange(this.queue.length, this.attempt > 0);
+    // An empty queue is never "retrying", even if a past attempt failed and
+    // its backoff timer is still pending (e.g. after add/delete coalescing).
+    this.callbacks.onQueueChange(this.queue.length, this.queue.length > 0 && this.attempt > 0);
   }
 
   private kick(): void {

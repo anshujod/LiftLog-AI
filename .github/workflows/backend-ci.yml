@@ -1,0 +1,90 @@
+name: Backend CI
+
+on:
+  pull_request:
+    paths:
+      - "api/**"
+      - ".github/workflows/backend-ci.yml"
+  push:
+    branches: [main]
+    paths:
+      - "api/**"
+      - ".github/workflows/backend-ci.yml"
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/liftlog_test
+      # No AUTH_SECRET here: tests default it via conftest, and hardcoded
+      # secrets in workflow files trip secret scanners.
+      # Shared CI runners are slower than a dev machine: the perf suite is a
+      # regression tripwire here, while the 300ms product budget is enforced
+      # by local runs (see tests/test_performance.py).
+      PERF_BUDGET_MS: "1000"
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Install dependencies
+        run: uv sync --group dev
+
+      - name: Lint
+        run: uv run ruff check .
+
+      - name: Format check
+        run: uv run ruff format --check .
+
+      - name: Type check
+        run: uv run mypy app
+
+      - name: Tests with coverage
+        run: uv run pytest -q --cov=app --cov-report=term --cov-report=json:coverage.json
+
+      - name: Coverage gates (overall 80%, analytics 95%)
+        run: |
+          uv run python - << 'EOF'
+          import json
+          from pathlib import Path
+
+          report = json.loads(Path("coverage.json").read_text())
+          total = report["totals"]["percent_covered"]
+          assert total >= 80, f"overall coverage {total:.1f}% is below 80%"
+
+          files = report["files"]
+          covered = sum(
+              data["summary"]["covered_lines"]
+              for name, data in files.items()
+              if name.startswith("app/analytics/")
+          )
+          statements = sum(
+              data["summary"]["num_statements"]
+              for name, data in files.items()
+              if name.startswith("app/analytics/")
+          )
+          pct = 100 * covered / statements if statements else 100
+          assert pct >= 95, f"analytics coverage {pct:.1f}% is below 95%"
+          print(f"coverage OK: overall {total:.1f}%, analytics {pct:.1f}%")
+          EOF
