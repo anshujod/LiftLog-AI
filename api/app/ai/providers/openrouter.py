@@ -11,6 +11,7 @@ from app.ai.payloads import (
     TrainingSummaryPayload,
 )
 from app.ai.service import PROMPT_VERSION, load_system_prompt, utcnow
+from app.ai.usage import log_llm_usage
 from app.core.errors import AIUnavailableError
 
 _DEFAULT_BASE_URL = "https://openrouter.ai/api/v1"
@@ -48,11 +49,12 @@ class OpenRouterAIService:
     def complete(self, system: str, messages: list[ChatMessage]) -> str:
         return self._create(
             [{"role": "system", "content": system}]
-            + [{"role": m.role, "content": m.content} for m in messages]
+            + [{"role": m.role, "content": m.content} for m in messages],
+            operation="chat",
         )
 
     def analyze_progress(self, payload: ProgressAnalysisPayload) -> Insight:
-        text = self._complete(payload.model_dump_json(indent=2))
+        text = self._complete(payload.model_dump_json(indent=2), operation="analyze_progress")
         return Insight(
             summary=text, model=self._model, prompt_version=PROMPT_VERSION, generated_at=utcnow()
         )
@@ -65,7 +67,8 @@ class OpenRouterAIService:
             [
                 {"role": "system", "content": load_system_prompt("recommend")},
                 {"role": "user", "content": payload.model_dump_json(indent=2)},
-            ]
+            ],
+            operation="recommend_workout",
         )
         return Recommendation(
             headline=text.split("\n")[0][:160], explanation=text, model=self._model
@@ -76,21 +79,23 @@ class OpenRouterAIService:
             [
                 {"role": "system", "content": load_system_prompt("weekly_observation")},
                 {"role": "user", "content": payload.model_dump_json(indent=2)},
-            ]
+            ],
+            operation="summarize_training",
         )
         return Insight(
             summary=text, model=self._model, prompt_version=PROMPT_VERSION, generated_at=utcnow()
         )
 
-    def _complete(self, payload_json: str) -> str:
+    def _complete(self, payload_json: str, operation: str = "analyze_progress") -> str:
         return self._create(
             [
                 {"role": "system", "content": self._system},
                 {"role": "user", "content": payload_json},
-            ]
+            ],
+            operation=operation,
         )
 
-    def _create(self, messages: list[dict[str, str]]) -> str:
+    def _create(self, messages: list[dict[str, str]], operation: str = "chat") -> str:
         try:
             completion = self._client.chat.completions.create(
                 model=self._model,
@@ -105,6 +110,15 @@ class OpenRouterAIService:
             raise AIUnavailableError("AI analysis is unavailable right now") from exc
         except openai.OpenAIError as exc:
             raise AIUnavailableError("AI analysis is unavailable right now") from exc
+        # usage is absent on test fakes — never let metering break the call.
+        usage = getattr(completion, "usage", None)
+        log_llm_usage(
+            provider="openrouter",
+            model=self._model,
+            operation=operation,
+            input_tokens=getattr(usage, "prompt_tokens", None),
+            output_tokens=getattr(usage, "completion_tokens", None),
+        )
         text = (completion.choices[0].message.content or "").strip()
         if not text:
             raise AIUnavailableError("AI analysis is unavailable right now")
