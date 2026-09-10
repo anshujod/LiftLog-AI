@@ -223,15 +223,15 @@ sequenceDiagram
     U->>App: Start workout (POST /workouts)
     U->>App: Pick exercise (ExercisePicker)
     App->>Last: fetch last completed session
-    Last-->>App: sets + volume + all-time bests (200, empty if never done)
+    Last-->>App: sets, volume, all-time bests (200, empty if new)
     App->>App: prefill working sets (warmups excluded)
-    U->>App: edit / + / − / repeat / toggle warmup
-    App->>App: render instantly (optimistic) + enqueue op
-    App->>Bulk: background save, atomic replace + renumber
+    U->>App: edit sets, steppers, repeat, warmup toggle
+    App->>App: render instantly (optimistic) and enqueue op
+    App->>Bulk: background save, atomic replace and renumber
     Bulk-->>App: 200 (retry w/ backoff on failure, queue persisted)
-    U->>App: repeat per exercise; RestTimer + Wake Lock active
+    U->>App: repeat per exercise with RestTimer and Wake Lock on
     U->>Fin: Finish workout
-    Fin-->>App: summary + new PRs vs pre-workout bests
+    Fin-->>App: summary with new PRs vs pre-workout bests
     App->>U: WORKOUT COMPLETE 🎉 screen
 ```
 
@@ -362,9 +362,9 @@ sequenceDiagram
     P->>N: POST /api/auth/register {email, password ≥10}
     N->>A: POST /auth/register
     A->>D: create user (argon2 hash)
-    A-->>N: access (30m) + refresh (30d, type:refresh)
+    A-->>N: access (30m) and refresh (30d, type refresh)
     N-->>P: access in memory, refresh in httpOnly cookie
-    P->>A: API call + Bearer access
+    P->>A: API call with Bearer access
     A-->>P: 200 / 401 expired
     P->>N: refresh on 401 (once)
     N->>A: POST /auth/refresh
@@ -409,7 +409,7 @@ erDiagram
     }
     EXERCISES {
         uuid id PK
-        uuid user_id FK_NULL_global
+        uuid user_id FK "null means global"
         text name
         enum load_type
         enum progression_metric
