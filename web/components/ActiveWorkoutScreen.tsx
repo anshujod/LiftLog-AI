@@ -3,13 +3,17 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useActiveWorkout } from "@/hooks/useActiveWorkout";
+import { useVoiceInput } from "@/hooks/useVoiceInput";
 import { useWakeLock } from "@/hooks/useWakeLock";
 import { ExercisePicker } from "@/components/ExercisePicker";
+import { FloatingVoiceButton } from "@/components/FloatingVoiceButton";
+import { VoiceConfirmSheet, type VoiceConfirmValues } from "@/components/VoiceConfirmSheet";
 import { WorkoutExerciseCard } from "@/components/WorkoutExerciseCard";
 import { RestTimer } from "@/components/RestTimer";
 import { getUnitPreference, type Unit } from "@/lib/units";
+import { parseVoiceCommand, type VoiceLogCommand } from "@/lib/voice/parse";
 import type { SetRowValues } from "@/components/SetRow";
-import { getExercise, type Exercise } from "@/lib/api/exercises";
+import { getExercise, listExercises, type Exercise } from "@/lib/api/exercises";
 import {
   listTemplates,
   startWorkoutFromTemplate,
@@ -21,6 +25,13 @@ function SyncIndicator({ pendingCount, retrying }: { pendingCount: number; retry
   if (pendingCount === 0) return null;
   return <span className="text-xs text-muted">{retrying ? "Waiting for connection…" : "Syncing…"}</span>;
 }
+
+const VOICE_ERROR_NOTES: Record<string, string> = {
+  denied: "Microphone is blocked — allow access in the browser settings to log by voice.",
+  "no-speech": "Didn't hear anything — try again, closer to the mic.",
+  network: "Voice needs a connection right now — sets you already logged are safe.",
+  unknown: "Voice input failed — type the set instead.",
+};
 
 export function ActiveWorkoutScreen() {
   const searchParams = useSearchParams();
@@ -37,6 +48,52 @@ export function ActiveWorkoutScreen() {
   const [startingTemplateId, setStartingTemplateId] = useState<string | null>(null);
   const [templateError, setTemplateError] = useState<string | null>(null);
   const suggestionStartedRef = useRef(false);
+
+  const [voiceLibrary, setVoiceLibrary] = useState<Exercise[] | null>(null);
+  const [voiceLibraryLoading, setVoiceLibraryLoading] = useState(false);
+  const [voiceCommand, setVoiceCommand] = useState<VoiceLogCommand | null>(null);
+  const [voiceNote, setVoiceNote] = useState<string | null>(null);
+  // Fresh values for the async voice callbacks without re-subscribing.
+  const voiceLibraryRef = useRef<Exercise[] | null>(null);
+  const unitRef = useRef(unit);
+  const exercisesRef = useRef(activeWorkout.exercises);
+  useEffect(() => {
+    voiceLibraryRef.current = voiceLibrary;
+    unitRef.current = unit;
+    exercisesRef.current = activeWorkout.exercises;
+  });
+
+  const voice = useVoiceInput({
+    onDone: (transcript) => {
+      const command = parseVoiceCommand(transcript, voiceLibraryRef.current ?? [], unitRef.current);
+      if (command.kind === "repeat") {
+        const withSets = [...exercisesRef.current].reverse().find((ex) => ex.sets.length > 0);
+        if (!withSets) {
+          setVoiceNote("Nothing logged yet — say a full set first, like “bench 60 kilos 8 reps”.");
+        } else {
+          const last = withSets.sets[withSets.sets.length - 1];
+          setVoiceCommand({
+            kind: "log",
+            transcript,
+            exerciseId: withSets.exercise.id,
+            exerciseName: withSets.exercise.name,
+            exercisePhrase: "",
+            candidates: [],
+            loadG: last.load_g,
+            reps: last.reps,
+            sets: 1,
+            isWarmup: false,
+            confidence: "high",
+          });
+        }
+      } else if (command.kind === "log") {
+        setVoiceCommand(command);
+      } else {
+        setVoiceNote("Didn't catch that — try “bench 60 kilos 8 reps”.");
+      }
+    },
+    onError: (kind) => setVoiceNote(VOICE_ERROR_NOTES[kind] ?? VOICE_ERROR_NOTES.unknown),
+  });
 
   useWakeLock(activeWorkout.status === "ready");
 
@@ -96,6 +153,51 @@ export function ActiveWorkoutScreen() {
   function handleAddExercise(exercise: Exercise) {
     setShowPicker(false);
     void activeWorkout.addExercise(exercise);
+  }
+
+  async function handleMicPress() {
+    if (voice.status === "listening") {
+      voice.stop();
+      return;
+    }
+    setVoiceNote(null);
+    let library = voiceLibrary;
+    if (!library && !voiceLibraryLoading) {
+      setVoiceLibraryLoading(true);
+      try {
+        library = await listExercises();
+        setVoiceLibrary(library);
+      } catch {
+        setVoiceNote("Couldn't load exercises for voice matching — check your connection.");
+        setVoiceLibraryLoading(false);
+        return;
+      }
+      setVoiceLibraryLoading(false);
+    }
+    if (library) voice.start();
+  }
+
+  async function handleVoiceConfirm(values: VoiceConfirmValues) {
+    const existing = activeWorkout.exercises.find((ex) => ex.exercise.id === values.exerciseId);
+    let workoutExerciseId = existing?.workoutExerciseId;
+    if (!workoutExerciseId) {
+      const exercise = voiceLibrary?.find((e) => e.id === values.exerciseId);
+      if (!exercise) {
+        setVoiceNote("Couldn't find that exercise anymore — pick it by hand.");
+        setVoiceCommand(null);
+        return;
+      }
+      workoutExerciseId = (await activeWorkout.addExercise(exercise)).id;
+    }
+    for (let i = 0; i < values.sets; i++) {
+      activeWorkout.addSet(workoutExerciseId, {
+        load_g: values.loadG,
+        reps: values.reps,
+        is_warmup: values.isWarmup,
+      });
+    }
+    setRestKey((k) => k + 1);
+    setVoiceCommand(null);
   }
 
   async function handleFinish() {
@@ -206,6 +308,32 @@ export function ActiveWorkoutScreen() {
         + Add exercise
       </button>
 
+      {voice.supported && (
+        <FloatingVoiceButton
+          listening={voice.status === "listening"}
+          disabled={voiceLibraryLoading}
+          onPress={() => void handleMicPress()}
+        />
+      )}
+
+      {voice.status === "listening" && (
+        <p
+          aria-live="polite"
+          className="fixed bottom-40 left-1/2 z-40 max-w-[90vw] -translate-x-1/2 truncate rounded-full bg-surface px-4 py-2 text-sm shadow-lg"
+        >
+          {voice.interim ? `“${voice.interim}…”` : "Listening… say a set like “bench 60 kilos 8 reps”."}
+        </p>
+      )}
+
+      {voiceNote && (
+        <div className="flex items-center justify-between gap-2 rounded-lg border border-border bg-surface p-3 text-sm" role="status">
+          <span>{voiceNote}</span>
+          <button type="button" onClick={() => setVoiceNote(null)} className="shrink-0 text-accent">
+            Dismiss
+          </button>
+        </div>
+      )}
+
       {finishError && (
         <p className="text-sm text-danger" role="alert">
           {finishError}
@@ -223,6 +351,16 @@ export function ActiveWorkoutScreen() {
 
       {showPicker && (
         <ExercisePicker variant="sheet" onSelect={handleAddExercise} onClose={() => setShowPicker(false)} />
+      )}
+
+      {voiceCommand && voiceLibrary && (
+        <VoiceConfirmSheet
+          command={voiceCommand}
+          library={voiceLibrary}
+          unit={unit}
+          onConfirm={handleVoiceConfirm}
+          onClose={() => setVoiceCommand(null)}
+        />
       )}
     </div>
   );

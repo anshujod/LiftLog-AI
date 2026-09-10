@@ -57,6 +57,11 @@ engine that never does arithmetic**.
   sound/haptic cue, Wake Lock so the screen never sleeps mid-set.
 - Finish screen: exercise count, working sets, total volume, duration, and **new PRs
   detected against pre-workout bests** (`WORKOUT COMPLETE 🎉` summary).
+- Voice logging: push-to-talk mic on the active-workout screen
+  ("bench press sixty kilos three sets of eight", "same again", "warmup bench 40 ten").
+  A deterministic parser (`web/lib/voice/`, offline, no LLM) turns the transcript into
+  sets; a confirm sheet shows what was heard and nothing saves until you confirm.
+  Confirmed sets flow through the same offline-safe sync queue as typed sets.
 - Templates: save any workout as a template, start a fully prefilled workout from a
   template (Push / Pull / Legs is yours to build).
 - History: cursor-paginated workout list; export of full history as JSON + CSV
@@ -706,6 +711,15 @@ Verified on a real phone (installed to home screen, gym-tested):
 - [x] Screen stays awake during active workout (Wake Lock, silent fallback).
 - [x] Lighthouse PWA + accessibility > 90 (re-verify after visual changes).
 - [ ] Demo GIF recorded and linked at the top of this file.
+- [ ] Voice logging gym-tested: mic permission granted, "bench 60 kilos 3 sets of 8"
+  parses to the right confirm sheet, "same again" repeats the last set.
+
+Voice notes: speech recognition is the browser's (Web Speech API — Chrome/Edge and
+Safari 14.1+; Firefox shows no mic button), needs connectivity and a secure context
+(HTTPS in prod, `localhost` in dev), and streams utterances to the vendor's servers —
+only transcript text ever touches the app, no audio is recorded or stored. The parser
+is rule-based and offline; misheard numbers are caught at the confirm sheet, and
+server-side `load_type` validation remains the backstop.
 
 ---
 

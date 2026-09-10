@@ -116,7 +116,10 @@ export interface UseActiveWorkoutResult {
   canFinish: boolean;
   start: () => Promise<void>;
   startWithExercises: (exercises: Exercise[]) => Promise<void>;
-  addExercise: (exercise: Exercise) => Promise<void>;
+  /** Adds the exercise and resolves with the created workout-exercise, so
+   * callers (e.g. voice confirm) can add sets to it without reading back
+   * hook state that hasn't committed yet. */
+  addExercise: (exercise: Exercise) => Promise<WorkoutExercise>;
   removeExercise: (workoutExerciseId: string) => Promise<void>;
   addSet: (workoutExerciseId: string, data: SetInput) => void;
   updateSet: (workoutExerciseId: string, clientId: string, data: SetPatch) => void;
@@ -268,10 +271,11 @@ export function useActiveWorkout(resumeId: string | null | undefined): UseActive
 
   const addExercise = useCallback(
     async (exercise: Exercise) => {
-      if (!workout) return;
+      if (!workout) throw new Error("No active workout");
       const we = await addWorkoutExercise(workout.id, exercise.id);
       const lastSessionSets = await fetchLastSessionSets(exercise.id);
       setExercises((prev) => [...prev, { ...toDisplayExercise(we), lastSessionSets }]);
+      return we;
     },
     [workout]
   );
