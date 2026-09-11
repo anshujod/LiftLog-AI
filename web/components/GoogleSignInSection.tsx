@@ -27,7 +27,10 @@ export function GoogleSignInSection({ mode, busy, onIdToken, onError }: GoogleSi
   if (!clientId) return null;
   return (
     <GoogleOAuthProvider clientId={clientId}>
-      <div className={busy ? "pointer-events-none opacity-60" : undefined}>
+      <div
+        inert={busy ? true : undefined}
+        className={busy ? "pointer-events-none w-full opacity-60" : "w-full"}
+      >
         <GoogleLogin
           text={mode === "signup" ? "signup_with" : "signin_with"}
           theme="filled_black"

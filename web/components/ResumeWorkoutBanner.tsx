@@ -13,9 +13,11 @@ export function ResumeWorkoutBanner() {
   return (
     <Link
       href={`/workout?resume=${activeWorkoutId}`}
-      className="flex h-11 shrink-0 items-center justify-center bg-accent px-4 text-center text-sm font-medium text-white"
+      role="status"
+      className="animate-banner-in flex min-h-11 shrink-0 items-center justify-center gap-1 bg-accent-fill px-4 py-2.5 text-center text-sm font-semibold text-white"
     >
-      Workout in progress — tap to resume
+      <span className="truncate">Workout in progress — tap to resume</span>
+      <span aria-hidden="true">›</span>
     </Link>
   );
 }

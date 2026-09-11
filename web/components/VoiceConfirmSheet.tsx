@@ -4,6 +4,9 @@ import { useState } from "react";
 import type { Exercise } from "@/lib/api/exercises";
 import { gToUnitValue, unitToG, type Unit } from "@/lib/units";
 import type { VoiceLogCommand } from "@/lib/voice/parse";
+import { Button } from "@/components/ui/Button";
+import { ErrorNote } from "@/components/ui/ErrorNote";
+import { Sheet } from "@/components/ui/Sheet";
 
 export interface VoiceConfirmValues {
   exerciseId: string;
@@ -103,22 +106,9 @@ export function VoiceConfirmSheet({ command, library, unit, onConfirm, onClose }
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex flex-col justify-end bg-black/50"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Confirm voice-logged sets"
-    >
-      <div className="flex max-h-[90vh] flex-col gap-4 overflow-y-auto rounded-t-2xl bg-background p-4 pb-[env(safe-area-inset-bottom)]">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Log these sets?</h2>
-          <button type="button" onClick={onClose} disabled={confirming} className="text-sm text-muted">
-            Cancel
-          </button>
-        </div>
-
-        <p className="text-sm text-muted" aria-label="Heard transcript">
-          Heard: “{command.transcript}”
+    <Sheet title="Log these sets?" onClose={onClose} tall>
+        <p className="text-sm text-muted">
+          Heard: <span aria-label="Heard transcript">“{command.transcript}”</span>
         </p>
 
         {command.confidence === "low" && (
@@ -135,7 +125,7 @@ export function VoiceConfirmSheet({ command, library, unit, onConfirm, onClose }
                 key={candidate.id}
                 type="button"
                 onClick={() => setExerciseId(candidate.id)}
-                className="h-12 rounded-lg border border-border px-4 text-left text-sm font-medium"
+                className="flex min-h-12 items-center rounded-lg border border-border px-4 text-left text-sm font-medium"
               >
                 {candidate.name}
               </button>
@@ -152,12 +142,15 @@ export function VoiceConfirmSheet({ command, library, unit, onConfirm, onClose }
             {hint && <p className="text-xs text-muted">{hint}</p>}
 
             {!isBodyweight && (
-              <label className="flex flex-col gap-1 text-sm text-muted">
+              <label className="flex flex-col gap-1 text-sm text-muted" htmlFor="voice-weight">
                 Weight ({unit}{exercise.load_type === "dumbbell_per_hand" ? ", per hand" : ""})
                 <input
+                  id="voice-weight"
+                  name="voice-weight"
                   value={loadText}
                   onChange={(e) => setLoadText(e.target.value)}
                   inputMode="decimal"
+                  enterKeyHint="next"
                   aria-label={`Weight in ${unit}`}
                   className="h-12 rounded-lg border border-border bg-surface px-4 text-base text-foreground outline-none focus:border-accent"
                 />
@@ -165,55 +158,61 @@ export function VoiceConfirmSheet({ command, library, unit, onConfirm, onClose }
             )}
 
             <div className="flex gap-3">
-              <label className="flex flex-1 flex-col gap-1 text-sm text-muted">
+              <label className="flex flex-1 flex-col gap-1 text-sm text-muted" htmlFor="voice-reps">
                 Reps
                 <input
+                  id="voice-reps"
+                  name="voice-reps"
                   value={repsText}
                   onChange={(e) => setRepsText(e.target.value)}
                   inputMode="numeric"
+                  enterKeyHint="next"
                   aria-label="Reps"
                   className="h-12 rounded-lg border border-border bg-surface px-4 text-base text-foreground outline-none focus:border-accent"
                 />
               </label>
-              <label className="flex flex-1 flex-col gap-1 text-sm text-muted">
+              <label className="flex flex-1 flex-col gap-1 text-sm text-muted" htmlFor="voice-sets">
                 Sets
                 <input
+                  id="voice-sets"
+                  name="voice-sets"
                   value={setsText}
                   onChange={(e) => setSetsText(e.target.value)}
                   inputMode="numeric"
+                  enterKeyHint="done"
                   aria-label="Sets"
                   className="h-12 rounded-lg border border-border bg-surface px-4 text-base text-foreground outline-none focus:border-accent"
                 />
               </label>
             </div>
 
-            <label className="flex items-center gap-2 text-sm">
+            <label className="flex min-h-11 items-center gap-3 text-sm" htmlFor="voice-warmup">
               <input
+                id="voice-warmup"
+                name="voice-warmup"
                 type="checkbox"
                 checked={isWarmup}
                 onChange={(e) => setIsWarmup(e.target.checked)}
-                className="h-5 w-5"
+                className="h-5 w-5 shrink-0 accent-[var(--color-accent)]"
               />
               Warmup set (excluded from PRs and trends)
             </label>
           </>
         )}
 
-        {error && (
-          <p className="text-sm text-danger" role="alert">
-            {error}
-          </p>
-        )}
+        {error && <ErrorNote message={error} />}
 
-        <button
+        <Button
           type="button"
+          variant="primary"
+          size="md"
+          className="h-14 w-full text-lg"
+          loading={confirming}
+          loadingLabel="Logging…"
           onClick={() => void handleConfirm()}
-          disabled={confirming}
-          className="h-14 rounded-lg bg-accent text-lg font-medium text-white disabled:opacity-50"
         >
-          {confirming ? "Logging…" : "Confirm and log"}
-        </button>
-      </div>
-    </div>
+          Confirm and log
+        </Button>
+    </Sheet>
   );
 }

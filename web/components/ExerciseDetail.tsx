@@ -17,6 +17,8 @@ import { ExerciseCharts } from "@/components/ExerciseCharts";
 import { formatAbsoluteDate, formatRelativeDate } from "@/lib/dates";
 import { formatLoad, getUnitPreference, type Unit } from "@/lib/units";
 import { ApiError } from "@/lib/api/errors";
+import { Button } from "@/components/ui/Button";
+import { SkeletonStack } from "@/components/ui/Skeleton";
 
 interface ExerciseDetailProps {
   exerciseId: string;
@@ -27,7 +29,7 @@ export function ExerciseDetail({ exerciseId }: ExerciseDetailProps) {
   const [prs, setPrs] = useState<ExercisePRs | null>(null);
   const [stats, setStats] = useState<ExerciseLifetimeStats | null>(null);
   const [unit, setUnit] = useState<Unit>("kg");
-  const [sessions, setSessions] = useState<SessionSummary[]>([]);
+  const [sessions, setSessions] = useState<SessionSummary[] | null>(null);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -71,7 +73,7 @@ export function ExerciseDetail({ exerciseId }: ExerciseDetailProps) {
     setLoadingMore(true);
     try {
       const page = await getHistory(exerciseId, { limit: 20, cursor: nextCursor });
-      setSessions((prev) => [...prev, ...page.sessions]);
+      setSessions((prev) => [...(prev ?? []), ...page.sessions]);
       setNextCursor(page.next_cursor);
     } finally {
       setLoadingMore(false);
@@ -130,8 +132,11 @@ export function ExerciseDetail({ exerciseId }: ExerciseDetailProps) {
 
       <div className="flex flex-col gap-2">
         <h2 className="text-lg font-semibold">History</h2>
-        {sessions.length === 0 && <p className="text-sm text-muted">No sessions yet.</p>}
-        {sessions.length > 0 && (
+        {sessions === null && <SkeletonStack rows={3} />}
+        {sessions !== null && sessions.length === 0 && (
+          <p className="text-sm text-muted">No sessions yet.</p>
+        )}
+        {sessions !== null && sessions.length > 0 && (
           <ul className="flex flex-col divide-y divide-border rounded-xl border border-border bg-surface">
             {sessions.map((session) => {
               const isOpen = expanded.has(session.workout_id);
@@ -149,7 +154,15 @@ export function ExerciseDetail({ exerciseId }: ExerciseDetailProps) {
                         {formatAbsoluteDate(session.performed_on)}
                       </span>
                     </span>
-                    <span className="tabular-nums text-sm text-muted">{session.volume.display}</span>
+                    <span className="flex items-center gap-2">
+                      <span className="tabular-nums text-sm text-muted">{session.volume.display}</span>
+                      <span
+                        aria-hidden="true"
+                        className={`transition-transform ${isOpen ? "rotate-90" : ""}`}
+                      >
+                        ›
+                      </span>
+                    </span>
                   </button>
                   {isOpen && (
                     <ul className="flex flex-col gap-1 px-4 pb-3">
@@ -169,14 +182,16 @@ export function ExerciseDetail({ exerciseId }: ExerciseDetailProps) {
           </ul>
         )}
         {nextCursor && (
-          <button
-            type="button"
-            onClick={loadMore}
-            disabled={loadingMore}
-            className="h-11 rounded-lg border border-border text-sm text-muted disabled:opacity-60"
+          <Button
+            variant="secondary"
+            size="sm"
+            className="w-full"
+            loading={loadingMore}
+            loadingLabel="Loading…"
+            onClick={() => void loadMore()}
           >
-            {loadingMore ? "Loading…" : "Load more"}
-          </button>
+            Load more
+          </Button>
         )}
       </div>
     </div>

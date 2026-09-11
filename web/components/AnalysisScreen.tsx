@@ -12,6 +12,10 @@ import { analyzeProgress, type ProgressInsight } from "@/lib/api/ai";
 import { listWorkouts, type WorkoutSummary } from "@/lib/api/workouts";
 import { SimpleBarChart, type BarPoint } from "@/components/charts/SimpleBarChart";
 import { ApiError } from "@/lib/api/errors";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { ErrorNote } from "@/components/ui/ErrorNote";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 const WORKOUT_FREQUENCY_WEEKS = 12;
 const WORKOUTS_FETCH_LIMIT = 100;
@@ -68,6 +72,7 @@ export function AnalysisScreen() {
   const [insightLoading, setInsightLoading] = useState(false);
   const [insightFailed, setInsightFailed] = useState(false);
   const [insightRequested, setInsightRequested] = useState(false);
+  const [insightCached, setInsightCached] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   function requestInsight() {
@@ -77,6 +82,7 @@ export function AnalysisScreen() {
     analyzeProgress("90d")
       .then((data) => {
         setInsight(data.insight);
+        setInsightCached((data as unknown as { cached?: boolean }).cached ?? false);
         setInsightLoading(false);
       })
       .catch(() => {
@@ -120,9 +126,9 @@ export function AnalysisScreen() {
 
   if (error) {
     return (
-      <p className="p-4 text-sm text-danger" role="alert">
-        {error}
-      </p>
+      <div className="p-4">
+        <ErrorNote message={error} />
+      </div>
     );
   }
 
@@ -130,69 +136,18 @@ export function AnalysisScreen() {
     <div className="flex flex-col gap-4 p-4">
       <h1 className="text-2xl font-semibold">Analysis</h1>
 
-      <div className="flex flex-col gap-2 rounded-xl border border-accent/40 bg-surface p-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-medium uppercase tracking-wide text-muted">
-            Training notes
-          </h2>
-          <span className="rounded-full border border-accent/50 px-2 py-0.5 text-xs text-accent">
-            AI interpretation
-          </span>
-        </div>
-        {insightLoading && (
-          <div className="h-20 animate-pulse rounded-lg bg-surface-raised" aria-busy="true" />
-        )}
-        {!insightLoading && insight && (
-          <div className="flex flex-col items-start gap-2">
-            <p className="text-sm">{insight.summary}</p>
-            <button
-              type="button"
-              onClick={requestInsight}
-              className="h-9 rounded-lg border border-border px-4 text-sm"
-            >
-              Analyze again
-            </button>
-          </div>
-        )}
-        {!insightLoading && !insightRequested && (
-          <div className="flex flex-col items-start gap-2">
-            <p className="text-sm text-muted">
-              Get an AI-written read of your last 90 days. Uses AI credits.
-            </p>
-            <button
-              type="button"
-              onClick={requestInsight}
-              className="h-11 rounded-lg bg-accent px-5 text-sm font-medium text-white"
-            >
-              Analyze
-            </button>
-          </div>
-        )}
-        {!insightLoading && insightRequested && !insight && insightFailed && (
-          <div className="flex flex-col items-start gap-2">
-            <p className="text-sm text-muted">AI analysis unavailable right now.</p>
-            <button
-              type="button"
-              onClick={requestInsight}
-              className="h-9 rounded-lg border border-border px-4 text-sm"
-            >
-              Retry
-            </button>
-          </div>
-        )}
-      </div>
-
-      <div className="flex flex-col gap-2 rounded-xl border border-border bg-surface p-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-medium uppercase tracking-wide text-muted">
-            Muscle group volume (30 days)
-          </h2>
+      <Card
+        title="Muscle group volume (30 days)"
+        action={
           <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted">
             Calculated
           </span>
-        </div>
+        }
+      >
         {muscleGroups === null && (
-          <div className="h-[180px] animate-pulse rounded-lg bg-surface-raised" aria-busy="true" />
+          <div aria-busy="true">
+            <Skeleton className="h-[180px]" />
+          </div>
         )}
         {muscleGroups !== null && muscleGroups.length === 0 && (
           <p className="text-sm text-muted">No sets logged in the last 30 days.</p>
@@ -200,19 +155,20 @@ export function AnalysisScreen() {
         {muscleGroups !== null && muscleGroups.length > 0 && (
           <SimpleBarChart data={muscleGroupBars(muscleGroups)} />
         )}
-      </div>
+      </Card>
 
-      <div className="flex flex-col gap-2 rounded-xl border border-border bg-surface p-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-medium uppercase tracking-wide text-muted">
-            Workout frequency (12 weeks)
-          </h2>
+      <Card
+        title="Workout frequency (12 weeks)"
+        action={
           <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted">
             Calculated
           </span>
-        </div>
+        }
+      >
         {frequency === null && (
-          <div className="h-[180px] animate-pulse rounded-lg bg-surface-raised" aria-busy="true" />
+          <div aria-busy="true">
+            <Skeleton className="h-[180px]" />
+          </div>
         )}
         {frequency !== null && frequency.every((p) => p.value === 0) && (
           <p className="text-sm text-muted">No workouts logged in the last 12 weeks.</p>
@@ -220,17 +176,20 @@ export function AnalysisScreen() {
         {frequency !== null && frequency.some((p) => p.value > 0) && (
           <SimpleBarChart data={frequency} color="var(--color-success)" />
         )}
-      </div>
+      </Card>
 
-      <div className="flex flex-col gap-2 rounded-xl border border-border bg-surface p-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-medium uppercase tracking-wide text-muted">Plateaus</h2>
+      <Card
+        title="Plateaus"
+        action={
           <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted">
             Calculated
           </span>
-        </div>
+        }
+      >
         {plateaus === null && (
-          <div className="h-16 animate-pulse rounded-lg bg-surface-raised" aria-busy="true" />
+          <div aria-busy="true">
+            <Skeleton className="h-16" />
+          </div>
         )}
         {plateaus !== null && plateaus.length === 0 && (
           <p className="text-sm text-muted">
@@ -253,7 +212,50 @@ export function AnalysisScreen() {
             ))}
           </ul>
         )}
-      </div>
+      </Card>
+
+      <Card
+        title="Training notes"
+        action={
+          <span className="rounded-full border border-accent/50 px-2 py-0.5 text-xs text-accent">
+            AI interpretation
+          </span>
+        }
+      >
+        {insightLoading && (
+          <div aria-busy="true">
+            <Skeleton className="h-20" />
+          </div>
+        )}
+        {!insightLoading && insight && (
+          <div className="flex flex-col items-start gap-2">
+            <p className="text-sm">{insight.summary}</p>
+            <p className="text-xs text-muted">Based on your last 90 days · generated just now</p>
+            {insightCached && <p className="text-xs text-muted">Saved from earlier.</p>}
+            <Button size="sm" variant="secondary" onClick={requestInsight}>
+              Analyze again
+            </Button>
+          </div>
+        )}
+        {!insightLoading && !insightRequested && (
+          <div className="flex flex-col items-start gap-2">
+            <p className="text-sm text-muted">
+              Get an AI-written read of your last 90 days. Uses AI credits.
+            </p>
+            <Button size="sm" variant="primary" onClick={requestInsight}>
+              Analyze
+            </Button>
+          </div>
+        )}
+        {!insightLoading && insightRequested && !insight && insightFailed && (
+          <div className="flex flex-col items-start gap-2">
+            <p className="text-sm text-muted">AI analysis unavailable right now.</p>
+            <Button size="sm" variant="secondary" onClick={requestInsight}>
+              Retry
+            </Button>
+          </div>
+        )}
+      </Card>
     </div>
   );
 }

@@ -10,6 +10,8 @@ import { FloatingVoiceButton } from "@/components/FloatingVoiceButton";
 import { VoiceConfirmSheet, type VoiceConfirmValues } from "@/components/VoiceConfirmSheet";
 import { WorkoutExerciseCard } from "@/components/WorkoutExerciseCard";
 import { RestTimer } from "@/components/RestTimer";
+import { ErrorNote } from "@/components/ui/ErrorNote";
+import { SkeletonStack } from "@/components/ui/Skeleton";
 import { getUnitPreference, type Unit } from "@/lib/units";
 import { parseVoiceCommand, type VoiceLogCommand } from "@/lib/voice/parse";
 import type { SetRowValues } from "@/components/SetRow";
@@ -23,7 +25,12 @@ import { ApiError } from "@/lib/api/errors";
 
 function SyncIndicator({ pendingCount, retrying }: { pendingCount: number; retrying: boolean }) {
   if (pendingCount === 0) return null;
-  return <span className="text-xs text-muted">{retrying ? "Waiting for connection…" : "Syncing…"}</span>;
+  return (
+    <span role="status" className="flex items-center gap-1.5 text-xs text-muted">
+      <span className="h-2 w-2 animate-pulse rounded-full bg-accent" aria-hidden="true" />
+      {retrying ? "Waiting for connection…" : `Syncing… (${pendingCount})`}
+    </span>
+  );
 }
 
 const VOICE_ERROR_NOTES: Record<string, string> = {
@@ -147,7 +154,8 @@ export function ActiveWorkoutScreen() {
 
   function handleLogSet(workoutExerciseId: string, values: SetRowValues) {
     activeWorkout.addSet(workoutExerciseId, values);
-    setRestKey((k) => k + 1);
+    // Warmups don't earn a rest timer — only working sets restart it.
+    if (!values.is_warmup) setRestKey((k) => k + 1);
   }
 
   function handleAddExercise(exercise: Exercise) {
@@ -196,7 +204,7 @@ export function ActiveWorkoutScreen() {
         is_warmup: values.isWarmup,
       });
     }
-    setRestKey((k) => k + 1);
+    if (!values.isWarmup) setRestKey((k) => k + 1);
     setVoiceCommand(null);
   }
 
@@ -220,18 +228,17 @@ export function ActiveWorkoutScreen() {
 
   if (activeWorkout.status === "resolving" || activeWorkout.status === "loading") {
     return (
-      <div className="flex flex-col gap-3 p-4" aria-busy="true">
-        <div className="h-24 animate-pulse rounded-xl bg-surface" />
-        <div className="h-24 animate-pulse rounded-xl bg-surface" />
+      <div className="flex flex-col p-4" role="status" aria-label="Loading workout">
+        <SkeletonStack rows={2} />
       </div>
     );
   }
 
   if (activeWorkout.status === "error") {
     return (
-      <p className="p-4 text-sm text-danger" role="alert">
-        {activeWorkout.error}
-      </p>
+      <div className="p-4">
+        <ErrorNote message={activeWorkout.error ?? "Couldn't load the workout"} />
+      </div>
     );
   }
 
@@ -242,7 +249,7 @@ export function ActiveWorkoutScreen() {
         <button
           type="button"
           onClick={() => void activeWorkout.start()}
-          className="h-14 w-full max-w-xs rounded-lg bg-accent text-lg font-medium text-white"
+          className="h-14 w-full max-w-xs rounded-lg bg-accent-fill text-lg font-medium text-white"
         >
           Start workout
         </button>
@@ -269,9 +276,7 @@ export function ActiveWorkoutScreen() {
               </button>
             ))}
             {templateError && (
-              <p className="text-sm text-danger" role="alert">
-                {templateError}
-              </p>
+              <ErrorNote message={templateError} />
             )}
           </div>
         )}
@@ -286,7 +291,11 @@ export function ActiveWorkoutScreen() {
         <SyncIndicator pendingCount={activeWorkout.pendingCount} retrying={activeWorkout.retrying} />
       </div>
 
-      {restKey > 0 && <RestTimer key={restKey} />}
+      {restKey > 0 && (
+        <div className="sticky top-2 z-30">
+          <RestTimer key={restKey} onDismiss={() => setRestKey(0)} />
+        </div>
+      )}
 
       {activeWorkout.exercises.map((ex) => (
         <WorkoutExerciseCard
@@ -319,7 +328,7 @@ export function ActiveWorkoutScreen() {
       {voice.status === "listening" && (
         <p
           aria-live="polite"
-          className="fixed bottom-40 left-1/2 z-40 max-w-[90vw] -translate-x-1/2 truncate rounded-full bg-surface px-4 py-2 text-sm shadow-lg"
+          className="fixed bottom-40 left-1/2 z-40 max-w-[90vw] -translate-x-1/2 break-words rounded-2xl bg-surface px-4 py-2 text-center text-sm leading-snug shadow-lg"
         >
           {voice.interim ? `“${voice.interim}…”` : "Listening… say a set like “bench 60 kilos 8 reps”."}
         </p>
@@ -328,25 +337,27 @@ export function ActiveWorkoutScreen() {
       {voiceNote && (
         <div className="flex items-center justify-between gap-2 rounded-lg border border-border bg-surface p-3 text-sm" role="status">
           <span>{voiceNote}</span>
-          <button type="button" onClick={() => setVoiceNote(null)} className="shrink-0 text-accent">
+          <button type="button" onClick={() => setVoiceNote(null)} className="flex min-h-11 shrink-0 items-center px-2 text-accent">
             Dismiss
           </button>
         </div>
       )}
 
       {finishError && (
-        <p className="text-sm text-danger" role="alert">
-          {finishError}
-        </p>
+        <ErrorNote message={finishError} />
       )}
 
       <button
         type="button"
         onClick={() => void handleFinish()}
         disabled={!activeWorkout.canFinish || finishing || activeWorkout.exercises.length === 0}
-        className="h-14 rounded-lg bg-accent text-lg font-medium text-white disabled:opacity-50"
+        className="h-14 rounded-lg bg-accent-fill text-lg font-medium text-white disabled:opacity-50"
       >
-        {finishing ? "Finishing…" : activeWorkout.canFinish ? "Finish workout" : "Syncing…"}
+        {finishing
+          ? "Finishing…"
+          : activeWorkout.canFinish
+            ? "Finish workout"
+            : `Syncing… (${activeWorkout.pendingCount})`}
       </button>
 
       {showPicker && (

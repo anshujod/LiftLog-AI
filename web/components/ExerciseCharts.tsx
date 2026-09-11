@@ -3,6 +3,9 @@
 import { useEffect, useState } from "react";
 import { getHistory, type Exercise, type SessionSummary } from "@/lib/api/exercises";
 import { TrendLineChart, type TrendPoint } from "@/components/charts/TrendLineChart";
+import { Card } from "@/components/ui/Card";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 const HISTORY_LIMIT = 100;
 const MIN_POINTS = 2;
@@ -63,7 +66,11 @@ export function ExerciseCharts({ exercise }: ExerciseChartsProps) {
   }, [exercise.id]);
 
   if (sessions === null) {
-    return <div className="h-[180px] animate-pulse rounded-xl bg-surface" aria-busy="true" />;
+    return (
+      <div aria-busy="true" aria-label="Loading chart">
+        <Skeleton className="h-[180px]" />
+      </div>
+    );
   }
 
   let series: TrendPoint[];
@@ -86,18 +93,13 @@ export function ExerciseCharts({ exercise }: ExerciseChartsProps) {
   }
 
   if (series.length < MIN_POINTS) {
-    return (
-      <div className="rounded-xl border border-border bg-surface p-4 text-sm text-muted">
-        Not enough sessions yet to chart {title.toLowerCase()}.
-      </div>
-    );
+    return <EmptyState title={`Not enough sessions yet to chart ${title.toLowerCase()}.`} />;
   }
 
   return (
-    <div className="flex flex-col gap-1 rounded-xl border border-border bg-surface p-4">
-      <h3 className="text-sm font-medium">{title}</h3>
+    <Card title={title}>
       {note && <p className="text-xs text-muted">{note}</p>}
       <TrendLineChart data={series} />
-    </div>
+    </Card>
   );
 }

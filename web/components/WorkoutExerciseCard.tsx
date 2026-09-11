@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { LastSessionPanel } from "@/components/LastSessionPanel";
 import { SetRow, type SetRowValues } from "@/components/SetRow";
 import { SuggestionCard } from "@/components/SuggestionCard";
 import type { DisplayExercise } from "@/hooks/useActiveWorkout";
-import type { Unit } from "@/lib/units";
+import { gToUnitValue, type Unit } from "@/lib/units";
 
 interface WorkoutExerciseCardProps {
   displayExercise: DisplayExercise;
@@ -41,28 +41,71 @@ export function WorkoutExerciseCard({
   onRemoveExercise,
 }: WorkoutExerciseCardProps) {
   const [showLastSession, setShowLastSession] = useState(false);
+  // Two-tap remove: first tap arms, second confirms. Same gym-proofing as
+  // the set-row delete.
+  const [confirmingRemove, setConfirmingRemove] = useState(false);
+  const confirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { exercise, sets } = displayExercise;
   const lastLoggedSet = sets[sets.length - 1];
 
+  useEffect(() => {
+    return () => {
+      if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current);
+    };
+  }, []);
+
+  function handleRemovePress() {
+    if (!confirmingRemove) {
+      setConfirmingRemove(true);
+      if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current);
+      confirmTimerRef.current = setTimeout(() => setConfirmingRemove(false), 3000);
+      return;
+    }
+    if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current);
+    setConfirmingRemove(false);
+    onRemoveExercise();
+  }
+
+  const workingSets = sets.filter((s) => !s.is_warmup);
+  const topSet = workingSets.reduce<{ load_g: number; reps: number } | null>(
+    (best, s) => (!best || s.load_g > best.load_g ? { load_g: s.load_g, reps: s.reps } : best),
+    null
+  );
+
   return (
     <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface-raised p-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <button
           type="button"
           onClick={() => setShowLastSession((v) => !v)}
-          className="flex-1 text-left text-lg font-semibold"
+          aria-expanded={showLastSession}
+          className="flex min-h-11 min-w-0 flex-1 items-center text-left text-lg font-semibold"
         >
-          {exercise.name}
+          <span className="truncate">{exercise.name}</span>
         </button>
         <button
           type="button"
-          onClick={onRemoveExercise}
-          className="h-9 w-9 shrink-0 rounded-lg text-lg leading-none text-muted"
-          aria-label={`Remove ${exercise.name} from this workout`}
+          onClick={handleRemovePress}
+          className={`flex h-11 shrink-0 items-center justify-center rounded-lg leading-none ${
+            confirmingRemove
+              ? "bg-danger/15 px-3 text-sm font-medium text-danger"
+              : "w-11 text-lg text-muted"
+          }`}
+          aria-label={
+            confirmingRemove
+              ? `Confirm remove ${exercise.name} from this workout`
+              : `Remove ${exercise.name} from this workout`
+          }
         >
-          ×
+          {confirmingRemove ? "Sure?" : "×"}
         </button>
       </div>
+      {topSet && (
+        <p className="tabular-nums text-xs text-muted" aria-label="Session summary">
+          {workingSets.length} working · top {formatLoadValue(topSet.load_g, unit)}
+          {unit} × {topSet.reps}
+        </p>
+      )}
 
       {showLastSession && <LastSessionPanel exerciseId={exercise.id} />}
 
@@ -83,8 +126,8 @@ export function WorkoutExerciseCard({
         ))}
       </div>
 
-      <div className="flex items-center gap-2">
-        <div className="flex-1">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="min-w-60 flex-1">
           <SetRow
             key={`draft-${sets.length}`}
             unit={unit}
@@ -100,7 +143,7 @@ export function WorkoutExerciseCard({
             onClick={() =>
               onLogSet({ load_g: lastLoggedSet.load_g, reps: lastLoggedSet.reps, is_warmup: false })
             }
-            className="h-9 shrink-0 rounded-lg border border-border px-3 text-xs text-muted"
+            className="flex h-11 shrink-0 items-center rounded-lg border border-border px-4 text-sm text-muted"
           >
             Repeat
           </button>
@@ -108,4 +151,9 @@ export function WorkoutExerciseCard({
       </div>
     </div>
   );
+}
+
+function formatLoadValue(loadG: number, unit: Unit): string {
+  const value = gToUnitValue(loadG, unit);
+  return value % 1 === 0 ? String(value) : value.toFixed(1);
 }

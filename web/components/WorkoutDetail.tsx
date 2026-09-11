@@ -14,6 +14,7 @@ import { SetRow, type SetRowValues } from "@/components/SetRow";
 import { getUnitPreference, type Unit } from "@/lib/units";
 import { formatAbsoluteDate, formatRelativeDate } from "@/lib/dates";
 import { ApiError } from "@/lib/api/errors";
+import { ErrorNote } from "@/components/ui/ErrorNote";
 
 interface WorkoutDetailProps {
   workoutId: string;
@@ -22,7 +23,7 @@ interface WorkoutDetailProps {
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div className="tabular-nums text-lg font-semibold">{value}</div>
+      <div className="tabular-nums text-xl font-semibold">{value}</div>
       <div className="text-xs text-muted">{label}</div>
     </div>
   );
@@ -169,7 +170,7 @@ export function WorkoutDetail({ workoutId }: WorkoutDetailProps) {
               <p className="text-xs font-medium uppercase tracking-wide text-muted">New PRs</p>
               {finishSummary.new_prs.map((pr) => (
                 <p key={`${pr.exercise_id}-${pr.pr_type}`} className="text-sm">
-                  🏆 {pr.exercise_name} — {pr.value.display}
+                  <span aria-hidden="true">🏆</span> {pr.exercise_name} — {pr.value.display}
                   {pr.reps ? ` × ${pr.reps}` : ""}
                 </p>
               ))}
@@ -199,16 +200,12 @@ export function WorkoutDetail({ workoutId }: WorkoutDetailProps) {
                   maxLength={200}
                   className="h-11 rounded-lg border border-border bg-surface px-3 text-base"
                 />
-                {saveTemplateError && (
-                  <p className="text-sm text-danger" role="alert">
-                    {saveTemplateError}
-                  </p>
-                )}
+                {saveTemplateError && <ErrorNote message={saveTemplateError} />}
                 <div className="flex gap-2">
                   <button
                     type="submit"
                     disabled={!templateName.trim() || savingTemplate}
-                    className="h-11 flex-1 rounded-lg bg-accent text-sm font-medium text-white disabled:opacity-50"
+                    className="h-11 flex-1 rounded-lg bg-accent-fill text-sm font-medium text-white disabled:opacity-50"
                   >
                     {savingTemplate ? "Saving…" : "Save template"}
                   </button>
