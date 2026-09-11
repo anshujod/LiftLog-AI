@@ -4,6 +4,13 @@ from pathlib import Path
 
 _NUMBER_RE = re.compile(r"\d[\d,]*(?:\.\d+)?")
 
+# Identifiers are not measurements: a UUID's hex runs must never ground an
+# output number. Random fixture UUIDs otherwise flake the corruption eval
+# (~3% of runs land a fragment within tolerance of the probe number).
+_UUID_RE = re.compile(
+    r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
+)
+
 _HEDGED_WORDS = ("may", "appears", "appear", "consider", "suggest", "might", "could")
 
 _BANNED_PHRASES = (
@@ -38,12 +45,15 @@ def extract_numbers(text: str) -> list[str]:
 def assert_grounded(output: str, payload_json: str, rel_tol: float = 0.01) -> None:
     """Every numeric token in the output must appear in the payload, either
     verbatim or within `rel_tol` (covers display rounding like 93.33 → 93.3).
-    Raises AssertionError listing offenders — a failing test, not a judgment."""
-    raw_numbers = [_normalize_number(token) for token in extract_numbers(payload_json)]
+    UUID identifiers are stripped from the payload first — hex runs are not
+    quantities. Raises AssertionError listing offenders — a failing test,
+    not a judgment."""
+    measurable_json = _UUID_RE.sub("", payload_json)
+    raw_numbers = [_normalize_number(token) for token in extract_numbers(measurable_json)]
     known_numbers: list[float] = [value for value in raw_numbers if value is not None]
     offenders: list[str] = []
     for token in extract_numbers(output):
-        if token in payload_json or token.replace(",", "") in payload_json:
+        if token in measurable_json or token.replace(",", "") in measurable_json:
             continue
         value = _normalize_number(token)
         if value is None:

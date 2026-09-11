@@ -5,6 +5,7 @@ repeatable. Set LIVE_AI=1 to run the provider-backed checks against the real
 provider as well (needs AI_API_KEY; scenario wording may vary by model).
 """
 
+import json
 import os
 
 import pytest
@@ -92,6 +93,16 @@ class TestStubHonesty:
         corrupted = summary + " and hit 9999.9 kg last Tuesday."
         with pytest.raises(AssertionError, match="9999.9"):
             checks.assert_grounded(corrupted, _payload_json(payload))
+
+    def test_uuid_hex_fragments_ground_nothing(self) -> None:
+        # "9995" sits within tolerance of the probe "9999" — without
+        # identifier stripping this would wrongly pass as grounded.
+        # Regression test for the ~3% flake in the corruption eval above.
+        payload_json = json.dumps(
+            {"exercise_id": "00000000-9995-4000-8000-000000000000", "volume_grams": 100}
+        )
+        with pytest.raises(AssertionError, match="9999"):
+            checks.assert_grounded("you hit 9999 kg", payload_json)
 
     def test_no_foreign_exercises(self) -> None:
         service = StubAIService()
