@@ -5,9 +5,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { ApiError } from "@/lib/api/errors";
+import { GoogleSignInSection, isGoogleSignInEnabled } from "@/components/GoogleSignInSection";
 
 export function RegisterForm() {
-  const { register } = useAuth();
+  const { register, loginWithGoogle } = useAuth();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -28,8 +29,37 @@ export function RegisterForm() {
     }
   }
 
+  async function handleGoogleIdToken(idToken: string) {
+    setError(null);
+    setSubmitting(true);
+    try {
+      await loginWithGoogle(idToken);
+      router.replace("/");
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Something went wrong");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4">
+      {isGoogleSignInEnabled() && (
+        <>
+          <GoogleSignInSection
+            mode="signup"
+            busy={submitting}
+            onIdToken={(idToken) => void handleGoogleIdToken(idToken)}
+            onError={setError}
+          />
+          <div className="flex items-center gap-3 text-xs text-muted" aria-hidden="true">
+            <span className="h-px flex-1 bg-border" />
+            <span>or</span>
+            <span className="h-px flex-1 bg-border" />
+          </div>
+        </>
+      )}
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <label className="flex flex-col gap-1 text-sm text-muted">
         Email
         <input
@@ -72,6 +102,7 @@ export function RegisterForm() {
           Log in
         </Link>
       </p>
-    </form>
+      </form>
+    </div>
   );
 }

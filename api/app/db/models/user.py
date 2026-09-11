@@ -23,7 +23,8 @@ class User(Base):
         UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
     )
     email: Mapped[str] = mapped_column(CITEXT, unique=True, nullable=False)
-    password_hash: Mapped[str] = mapped_column(String, nullable=False)
+    password_hash: Mapped[str | None] = mapped_column(String, nullable=True)
+    google_sub: Mapped[str | None] = mapped_column(String, unique=True, nullable=True)
     unit_preference: Mapped[UnitPref] = mapped_column(
         unit_pref_enum, nullable=False, server_default=UnitPref.KG.value
     )

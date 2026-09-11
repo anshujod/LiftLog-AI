@@ -21,6 +21,12 @@ class RefreshRequest(BaseModel):
     refresh_token: str
 
 
+class GoogleLoginRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id_token: str = Field(min_length=1, max_length=8192)
+
+
 class TokenResponse(BaseModel):
     access_token: str
     refresh_token: str

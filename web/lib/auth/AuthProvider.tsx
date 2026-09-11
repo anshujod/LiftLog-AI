@@ -17,6 +17,7 @@ interface AuthContextValue {
   status: AuthStatus;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
+  loginWithGoogle: (idToken: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -84,6 +85,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setStatus("authenticated");
   }, []);
 
+  const loginWithGoogle = useCallback(async (idToken: string) => {
+    const data = await postJson<TokenResponse>("/api/auth/google", { id_token: idToken });
+    setAccessToken(data.access_token);
+    resetUnitPreferenceCache();
+    setStatus("authenticated");
+  }, []);
+
   const logout = useCallback(async () => {
     await fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
     setAccessToken(null);
@@ -93,7 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [router]);
 
   return (
-    <AuthContext.Provider value={{ status, login, register, logout }}>
+    <AuthContext.Provider value={{ status, login, register, loginWithGoogle, logout }}>
       {children}
     </AuthContext.Provider>
   );
