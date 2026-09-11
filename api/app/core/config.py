@@ -9,6 +9,7 @@ class Settings(BaseSettings):
 
     database_url: str
     auth_secret: str
+    google_client_id: str = ""
     ai_api_key: str = ""
     ai_model: str = "claude-sonnet-4-20250514"
     ai_base_url: str = ""

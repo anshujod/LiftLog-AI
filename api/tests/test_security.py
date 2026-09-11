@@ -26,7 +26,7 @@ def _auth_headers(tokens: dict) -> dict:
 class TestAuthCoverage:
     """Every route except an explicit public list must require authentication."""
 
-    PUBLIC_PATHS = {"/health", "/auth/register", "/auth/login", "/auth/refresh"}
+    PUBLIC_PATHS = {"/health", "/auth/register", "/auth/login", "/auth/refresh", "/auth/google"}
 
     def test_openapi_schema_has_no_unprotected_routes(self) -> None:
         spec = app.openapi()
