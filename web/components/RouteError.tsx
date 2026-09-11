@@ -15,20 +15,23 @@ export function RouteError({
   reset: () => void;
 }) {
   return (
-    <div className="flex min-h-[50dvh] flex-col items-center justify-center gap-3 p-6 text-center">
+    <div
+      role="alert"
+      className="flex min-h-[50dvh] flex-col items-center justify-center gap-3 p-6 text-center"
+    >
       <p className="text-lg font-semibold">Something went wrong</p>
       <p className="max-w-xs text-sm text-muted">{message}</p>
       <div className="mt-2 flex gap-2">
         <button
           type="button"
           onClick={reset}
-          className="h-11 rounded-xl bg-accent px-5 text-sm font-medium text-white"
+          className="h-11 rounded-lg bg-accent-fill px-5 text-sm font-medium text-white"
         >
           Try again
         </button>
         <Link
           href="/"
-          className="flex h-11 items-center rounded-xl border border-border px-5 text-sm font-medium"
+          className="flex h-11 items-center rounded-lg border border-border px-5 text-sm font-medium"
         >
           Home
         </Link>

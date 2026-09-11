@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useActiveWorkoutId } from "@/hooks/useActiveWorkoutId";
@@ -9,6 +9,10 @@ import { weeklySummary, type WeekSummary } from "@/lib/api/ai";
 import { getWorkout, listWorkouts } from "@/lib/api/workouts";
 import { getLastSession } from "@/lib/api/exercises";
 import { ApiError } from "@/lib/api/errors";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorNote } from "@/components/ui/ErrorNote";
 
 interface SuggestionExercise {
   id: string;
@@ -59,15 +63,6 @@ function Stat({ label, value }: { label: string; value: string }) {
   );
 }
 
-function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="flex flex-col gap-2 rounded-xl border border-border bg-surface p-4">
-      <h2 className="text-sm font-medium uppercase tracking-wide text-muted">{title}</h2>
-      {children}
-    </div>
-  );
-}
-
 export function Dashboard() {
   const { logout } = useAuth();
   const activeWorkoutId = useActiveWorkoutId();
@@ -77,6 +72,16 @@ export function Dashboard() {
   const [weekReview, setWeekReview] = useState<WeekSummary | null>(null);
   const [weekLoading, setWeekLoading] = useState(false);
   const [weekFailed, setWeekFailed] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  const loadDashboard = useCallback(async () => {
+    setError(null);
+    try {
+      setData(await getDashboard());
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Couldn't load dashboard");
+    }
+  }, []);
 
   async function loadWeekReview() {
     setWeekLoading(true);
@@ -91,18 +96,10 @@ export function Dashboard() {
   }
 
   useEffect(() => {
-    let cancelled = false;
-    getDashboard()
-      .then((d) => {
-        if (!cancelled) setData(d);
-      })
-      .catch((err) => {
-        if (!cancelled) setError(err instanceof ApiError ? err.message : "Couldn't load dashboard");
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    // Initial fetch only — Retry re-runs the same loader on demand.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void loadDashboard();
+  }, [loadDashboard]);
 
   useEffect(() => {
     let cancelled = false;
@@ -125,23 +122,28 @@ export function Dashboard() {
       {activeWorkoutId ? (
         <Link
           href={`/workout?resume=${activeWorkoutId}`}
-          className="flex h-16 items-center justify-center rounded-lg bg-accent text-lg font-medium text-white"
+          className="flex h-16 items-center justify-center rounded-lg bg-accent-fill text-lg font-medium text-white"
         >
           Resume workout
         </Link>
       ) : (
         <Link
           href="/workout"
-          className="flex h-16 items-center justify-center rounded-lg bg-accent text-lg font-medium text-white"
+          className="flex h-16 items-center justify-center rounded-lg bg-accent-fill text-lg font-medium text-white"
         >
           Start workout
         </Link>
       )}
 
       {error && (
-        <p className="text-sm text-danger" role="alert">
-          {error}
-        </p>
+        <ErrorNote
+          message={error}
+          action={
+            <Button variant="secondary" size="sm" onClick={() => void loadDashboard()}>
+              Retry
+            </Button>
+          }
+        />
       )}
 
       {!error && data === null && (
@@ -153,55 +155,74 @@ export function Dashboard() {
       )}
 
       {!activeWorkoutId && suggestion && suggestion.exercises.length > 0 && (
-        <SectionCard title="Today's suggestion">
+        <Card title="Today's suggestion">
           {suggestion.workoutTitle && <p className="text-sm">{suggestion.workoutTitle}</p>}
           <ul className="flex flex-col gap-1">
             {suggestion.exercises.map((ex) => (
               <li key={ex.id} className="flex items-center justify-between text-sm">
                 <span>{ex.name}</span>
                 {ex.topSetDisplay && (
-                  <span className="tabular-nums text-muted">{ex.topSetDisplay}</span>
+                  <span className="ml-3 shrink-0 tabular-nums text-muted">{ex.topSetDisplay}</span>
                 )}
               </li>
             ))}
           </ul>
           <Link
             href={`/workout?suggest=${suggestion.exercises.map((e) => e.id).join(",")}`}
-            className="mt-1 flex h-11 items-center justify-center rounded-lg bg-accent text-sm font-medium text-white"
+            className="mt-1 flex h-11 items-center justify-center rounded-lg bg-accent-fill text-sm font-medium text-white"
           >
             Start this workout
           </Link>
-        </SectionCard>
+        </Card>
+      )}
+
+      {data && data.workout_count === 0 && !suggestion && (
+        <EmptyState
+          title="No training data yet"
+          body="Log your first workout and this page fills in with progress, PRs, and trends."
+        />
       )}
 
       {data && data.top_improving_exercises.length > 0 && (
-        <SectionCard title="Recent progress">
+        <Card title="Recent progress">
           <ul className="flex flex-col gap-1.5">
             {data.top_improving_exercises.map((ex) => (
-              <li key={ex.exercise_id} className="flex items-center justify-between text-sm">
-                <Link href={`/exercises/${ex.exercise_id}`}>{ex.exercise_name}</Link>
-                <span className="tabular-nums text-success">+{ex.percent_change}%</span>
+              <li key={ex.exercise_id} className="flex items-center justify-between gap-2 text-sm">
+                <Link
+                  href={`/exercises/${ex.exercise_id}`}
+                  className="min-w-0 truncate py-0.5 text-accent hover:underline"
+                >
+                  {ex.exercise_name}
+                </Link>
+                <span className="shrink-0 tabular-nums text-success">+{ex.percent_change}%</span>
               </li>
             ))}
           </ul>
-        </SectionCard>
+        </Card>
       )}
 
       {data && data.recent_prs.length > 0 && (
-        <SectionCard title="Recent PRs">
+        <Card title="Recent PRs">
           <ul className="flex flex-col gap-1.5">
             {data.recent_prs.map((pr) => (
-              <li key={`${pr.exercise_id}-${pr.pr_type}-${pr.performed_on}`} className="text-sm">
-                🏆 {pr.exercise_name} — <span className="tabular-nums">{pr.value.display}</span>
-                {pr.reps ? ` × ${pr.reps}` : ""}
+              <li
+                key={`${pr.exercise_id}-${pr.pr_type}-${pr.performed_on}`}
+                className="flex min-w-0 items-center gap-1 text-sm"
+              >
+                <span aria-hidden="true">🏆</span>
+                <span className="min-w-0 truncate">{pr.exercise_name}</span>
+                <span className="shrink-0">
+                  — <span className="tabular-nums">{pr.value.display}</span>
+                  {pr.reps ? ` × ${pr.reps}` : ""}
+                </span>
               </li>
             ))}
           </ul>
-        </SectionCard>
+        </Card>
       )}
 
       {data && (data.weekly_volume.current_week.grams > 0 || data.weekly_volume.previous_week.grams > 0) && (
-        <SectionCard title="Weekly volume">
+        <Card title="Weekly volume">
           <div className="flex items-baseline gap-2">
             <span className="tabular-nums text-xl font-semibold">
               {data.weekly_volume.current_week.display}
@@ -210,6 +231,7 @@ export function Dashboard() {
               <span
                 className={`tabular-nums text-sm ${data.weekly_volume.percent_change >= 0 ? "text-success" : "text-danger"}`}
               >
+                <span aria-hidden="true">{data.weekly_volume.percent_change >= 0 ? "▲" : "▼"}</span>{" "}
                 {data.weekly_volume.percent_change >= 0 ? "+" : ""}
                 {data.weekly_volume.percent_change}% vs last week
               </span>
@@ -217,31 +239,32 @@ export function Dashboard() {
               <span className="text-sm text-muted">first week logged</span>
             )}
           </div>
-        </SectionCard>
+        </Card>
       )}
 
       {data && (
-        <SectionCard title="Consistency">
+        <Card title="Consistency">
           <div className="grid grid-cols-2 gap-2 text-center">
             <Stat label="Workouts (30d)" value={String(data.workout_count)} />
             <Stat label="Week streak" value={String(data.current_streak_weeks)} />
           </div>
-        </SectionCard>
+        </Card>
       )}
 
-      <SectionCard title="Week in review">
+      <Card title="Week in review">
         {!weekReview && !weekLoading && !weekFailed && (
           <div className="flex flex-col items-start gap-2">
             <p className="text-sm text-muted">
               Workouts, volume, PRs, and one AI observation for this week. Uses AI credits.
             </p>
-            <button
+            <Button
               type="button"
+              variant="primary"
+              size="sm"
               onClick={() => void loadWeekReview()}
-              className="h-11 rounded-lg bg-accent px-5 text-sm font-medium text-white"
             >
               Review my week
-            </button>
+            </Button>
           </div>
         )}
         {weekLoading && (
@@ -250,13 +273,14 @@ export function Dashboard() {
         {weekFailed && (
           <div className="flex flex-col items-start gap-2">
             <p className="text-sm text-muted">Week review unavailable right now.</p>
-            <button
+            <Button
               type="button"
+              variant="secondary"
+              size="sm"
               onClick={() => void loadWeekReview()}
-              className="h-9 rounded-lg border border-border px-4 text-sm"
             >
               Retry
-            </button>
+            </Button>
           </div>
         )}
         {weekReview && (
@@ -282,7 +306,7 @@ export function Dashboard() {
               <div className="flex flex-col gap-1">
                 {weekReview.new_prs.map((pr) => (
                   <p key={`${pr.exercise_id}-${pr.pr_type}`} className="text-sm">
-                    🏆 {pr.exercise_name} — {pr.value.display}
+                    <span aria-hidden="true">🏆</span> {pr.exercise_name} — {pr.value.display}
                     {pr.reps ? ` × ${pr.reps}` : ""}
                   </p>
                 ))}
@@ -296,19 +320,24 @@ export function Dashboard() {
             {weekReview.cached && <p className="text-xs text-muted">Saved from earlier.</p>}
           </div>
         )}
-      </SectionCard>
+      </Card>
 
-      <Link href="/analysis" className="text-center text-sm text-accent">
+      <Link href="/analysis" className="py-2 text-center text-sm text-accent hover:underline">
         See full analysis →
       </Link>
 
-      <button
-        type="button"
-        onClick={() => void logout()}
-        className="h-12 w-fit rounded-lg border border-border px-6 text-sm font-medium text-foreground"
+      <Button
+        variant="secondary"
+        size="md"
+        className="w-fit"
+        loading={loggingOut}
+        onClick={() => {
+          setLoggingOut(true);
+          void logout().finally(() => setLoggingOut(false));
+        }}
       >
         Log out
-      </button>
+      </Button>
     </div>
   );
 }

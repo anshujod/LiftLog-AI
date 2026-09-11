@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { gToUnitValue, unitToG, type Unit } from "@/lib/units";
 
 export interface SetRowValues {
@@ -30,6 +30,19 @@ export function SetRow({ unit, incrementG, initial, mode, syncStatus, onSave, on
   const [reps, setReps] = useState(initial.reps);
   const [repsText, setRepsText] = useState(String(initial.reps));
   const [isWarmup, setIsWarmup] = useState(initial.is_warmup);
+  // Two-tap delete: first tap arms, second confirms. Gym-proof against
+  // chalky mistaps without a blocking modal.
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const confirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const loadInputRef = useRef<HTMLInputElement>(null);
+  const repsInputRef = useRef<HTMLInputElement>(null);
+  const stepDisplay = formatValue(gToUnitValue(incrementG, unit));
+
+  useEffect(() => {
+    return () => {
+      if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current);
+    };
+  }, []);
 
   function commit(next: Partial<SetRowValues>) {
     const values: SetRowValues = {
@@ -70,61 +83,89 @@ export function SetRow({ unit, incrementG, initial, mode, syncStatus, onSave, on
   }
 
   function handleLogSet() {
+    try {
+      if (typeof navigator !== "undefined" && "vibrate" in navigator) navigator.vibrate(50);
+    } catch {
+      // haptics are a nicety — logging must never depend on them
+    }
     onSave?.({ load_g: loadG, reps, is_warmup: isWarmup });
   }
 
+  function handleDeletePress() {
+    if (!confirmingDelete) {
+      setConfirmingDelete(true);
+      if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current);
+      confirmTimerRef.current = setTimeout(() => setConfirmingDelete(false), 3000);
+      return;
+    }
+    if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current);
+    setConfirmingDelete(false);
+    onDelete?.();
+  }
+
   return (
-    <div className="flex items-center gap-2 py-1.5">
+    <div className={`flex items-center gap-2 py-1.5 ${mode === "draft" ? "animate-log-flash" : ""}`}>
       <button
         type="button"
         onClick={toggleWarmup}
         aria-pressed={isWarmup}
-        className={`h-9 shrink-0 rounded-lg border px-2 text-[11px] font-medium uppercase tracking-wide ${
+        title="Warmup set"
+        className={`h-11 shrink-0 rounded-lg border px-3 text-xs font-medium uppercase tracking-wide ${
           isWarmup ? "border-accent bg-accent/10 text-accent" : "border-border text-muted"
         }`}
       >
         W
       </button>
 
-      <div className="flex flex-1 items-center gap-1">
+      <div className="flex min-w-0 flex-1 items-center gap-1">
         <button
           type="button"
           onClick={() => step(-incrementG)}
-          className="h-9 w-9 shrink-0 rounded-lg border border-border text-lg leading-none text-muted"
+          className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-lg border border-border leading-none text-muted"
           aria-label={`Decrease by ${gToUnitValue(incrementG, unit)} ${unit}`}
         >
-          −
+          <span className="text-lg">−</span>
+          <span className="tabular-nums text-[10px]">{stepDisplay}</span>
         </button>
         <input
+          ref={loadInputRef}
           type="text"
           inputMode="decimal"
+          enterKeyHint="next"
           value={loadText}
           onChange={(e) => setLoadText(e.target.value)}
           onBlur={commitLoadText}
-          onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
-          className="h-9 w-16 rounded-lg border border-border bg-surface text-center text-base tabular-nums outline-none focus:border-accent"
+          onKeyDown={(e) => {
+            if (e.key === "Enter") repsInputRef.current?.focus();
+          }}
+          className="h-11 w-20 min-w-0 rounded-lg border border-border bg-surface text-center text-lg font-medium tabular-nums outline-none focus:border-accent"
           aria-label={`Load in ${unit}`}
         />
         <button
           type="button"
           onClick={() => step(incrementG)}
-          className="h-9 w-9 shrink-0 rounded-lg border border-border text-lg leading-none text-muted"
+          className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-lg border border-border leading-none text-muted"
           aria-label={`Increase by ${gToUnitValue(incrementG, unit)} ${unit}`}
         >
-          +
+          <span className="text-lg">+</span>
+          <span className="tabular-nums text-[10px]">{stepDisplay}</span>
         </button>
       </div>
 
-      <span className="text-muted">×</span>
+      <span className="text-xs text-muted" aria-hidden="true">
+        ×
+      </span>
 
       <input
+        ref={repsInputRef}
         type="text"
         inputMode="numeric"
+        enterKeyHint="done"
         value={repsText}
         onChange={(e) => setRepsText(e.target.value)}
         onBlur={commitRepsText}
         onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
-        className="h-9 w-14 shrink-0 rounded-lg border border-border bg-surface text-center text-base tabular-nums outline-none focus:border-accent"
+        className="h-11 w-16 shrink-0 rounded-lg border border-border bg-surface text-center text-lg font-medium tabular-nums outline-none focus:border-accent"
         aria-label="Reps"
       />
 
@@ -132,23 +173,25 @@ export function SetRow({ unit, incrementG, initial, mode, syncStatus, onSave, on
         <button
           type="button"
           onClick={handleLogSet}
-          className="h-9 shrink-0 rounded-lg bg-accent px-3 text-sm font-medium text-white"
+          className="h-11 shrink-0 rounded-lg bg-accent-fill px-4 text-sm font-medium text-white"
         >
           Log
         </button>
       ) : (
         <>
           <span
-            className={`h-2 w-2 shrink-0 rounded-full ${syncStatus === "pending" ? "animate-pulse bg-muted" : "bg-success"}`}
+            className={`h-2.5 w-2.5 shrink-0 rounded-full ${syncStatus === "pending" ? "animate-pulse bg-muted" : "bg-success"}`}
             aria-label={syncStatus === "pending" ? "Syncing" : "Saved"}
           />
           <button
             type="button"
-            onClick={onDelete}
-            className="h-9 w-9 shrink-0 rounded-lg text-lg leading-none text-danger"
-            aria-label="Delete set"
+            onClick={handleDeletePress}
+            className={`h-11 shrink-0 rounded-lg text-lg leading-none ${
+              confirmingDelete ? "bg-danger/15 px-3 text-sm font-medium text-danger" : "w-11 text-danger"
+            }`}
+            aria-label={confirmingDelete ? "Confirm delete" : "Delete set"}
           >
-            ×
+            {confirmingDelete ? "Sure?" : "×"}
           </button>
         </>
       )}

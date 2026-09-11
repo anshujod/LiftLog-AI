@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import { getLastSession, type LastSession } from "@/lib/api/exercises";
 import { formatAbsoluteDate, formatRelativeDate } from "@/lib/dates";
 import { ApiError } from "@/lib/api/errors";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorNote } from "@/components/ui/ErrorNote";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 interface LastSessionPanelProps {
   exerciseId: string;
@@ -46,37 +49,29 @@ export function LastSessionPanel({ exerciseId }: LastSessionPanelProps) {
 
   if (state.status === "loading") {
     return (
-      <div
-        className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4"
-        aria-busy="true"
-        aria-label="Loading last session"
-      >
-        <div className="h-4 w-32 animate-pulse rounded bg-surface-raised" />
-        <div className="h-8 w-full animate-pulse rounded bg-surface-raised" />
-        <div className="h-8 w-full animate-pulse rounded bg-surface-raised" />
-        <div className="h-4 w-40 animate-pulse rounded bg-surface-raised" />
+      <div aria-busy="true" aria-label="Loading last session">
+        <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4">
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-8 w-full" />
+          <Skeleton className="h-8 w-full" />
+          <Skeleton className="h-4 w-40" />
+        </div>
       </div>
     );
   }
 
   if (state.status === "error") {
-    return (
-      <div className="rounded-xl border border-border bg-surface p-4 text-sm text-danger" role="alert">
-        {state.message}
-      </div>
-    );
+    return <ErrorNote message={state.message} />;
   }
 
   const { data } = state;
 
   if (!data.has_data || !data.session) {
     return (
-      <div className="flex flex-col gap-1 rounded-xl border border-border bg-surface p-4">
-        <p className="font-medium">First time logging this one?</p>
-        <p className="text-sm text-muted">
-          Log a set and this panel will show exactly what you did, every time after.
-        </p>
-      </div>
+      <EmptyState
+        title="First time logging this one?"
+        body="Log a set and this panel will show exactly what you did, every time after."
+      />
     );
   }
 

@@ -22,6 +22,35 @@ function newId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
+function humanizeToolName(name: string): string {
+  const words = name.split("_");
+  const rest = words[0] === "get" ? words.slice(1) : words;
+  return rest
+    .map((word, i) => (i === 0 ? word.charAt(0).toUpperCase() + word.slice(1) : word))
+    .join(" ");
+}
+
+function summarizeArgs(args: Record<string, unknown>): string {
+  return Object.entries(args)
+    .filter(([, value]) => typeof value === "string" || typeof value === "number")
+    .map(([key, value]) => `${key}: ${String(value)}`)
+    .join(" · ");
+}
+
+function summarizeResult(result: unknown): string {
+  if (Array.isArray(result)) {
+    return `${result.length} row${result.length === 1 ? "" : "s"} returned`;
+  }
+  if (result && typeof result === "object") {
+    for (const value of Object.values(result as Record<string, unknown>)) {
+      if (Array.isArray(value)) {
+        return `${value.length} row${value.length === 1 ? "" : "s"} returned`;
+      }
+    }
+  }
+  return "Done";
+}
+
 function TraceDetails({ trace }: { trace: ChatAnswer["tool_trace"] }) {
   const [open, setOpen] = useState(false);
   if (trace.length === 0) return null;
@@ -37,17 +66,23 @@ function TraceDetails({ trace }: { trace: ChatAnswer["tool_trace"] }) {
       </button>
       {open && (
         <ul className="flex flex-col gap-2">
-          {trace.map((call, index) => (
-            <li key={`${call.round}-${call.name}-${index}`} className="rounded-lg bg-surface p-2 text-xs">
-              <p className="font-medium">
-                {call.name}
-                <span className="ml-2 font-normal text-muted">round {call.round}</span>
-              </p>
-              <pre className="overflow-x-auto whitespace-pre-wrap break-words text-muted">
-                {JSON.stringify({ arguments: call.arguments, result: call.result }, null, 1)}
-              </pre>
-            </li>
-          ))}
+          {trace.map((call, index) => {
+            const argSummary = summarizeArgs(call.arguments);
+            const resultSummary = summarizeResult(call.result);
+            const detail = [argSummary, resultSummary].filter(Boolean).join(" · ");
+            return (
+              <li
+                key={`${call.round}-${call.name}-${index}`}
+                className="rounded-lg bg-surface p-2 text-xs"
+              >
+                <p className="font-medium">
+                  {humanizeToolName(call.name)}
+                  <span className="ml-2 font-normal text-muted">round {call.round}</span>
+                </p>
+                {detail && <p className="text-muted">{detail}</p>}
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>
@@ -101,7 +136,7 @@ export function AskScreen() {
               key={question}
               type="button"
               onClick={() => void send(question)}
-              className="rounded-lg border border-border p-3 text-left text-sm"
+              className="min-h-[44px] rounded-lg border border-border p-3 text-left text-sm"
             >
               {question}
             </button>
@@ -114,14 +149,14 @@ export function AskScreen() {
           turn.role === "user" ? (
             <p
               key={turn.id}
-              className="self-end rounded-xl rounded-br-sm bg-accent px-4 py-2 text-sm text-white"
+              className="max-w-[85%] self-end rounded-xl rounded-br-sm bg-accent-fill px-4 py-2 text-sm text-white"
             >
               {turn.content}
             </p>
           ) : (
             <div
               key={turn.id}
-              className="flex flex-col gap-1 self-start rounded-xl rounded-bl-sm border border-border bg-surface-raised p-3 text-sm"
+              className="flex max-w-[85%] flex-col gap-1 self-start rounded-xl rounded-bl-sm border border-border bg-surface-raised p-3 text-sm"
             >
               <p>{turn.content}</p>
               {turn.trace && <TraceDetails trace={turn.trace} />}
@@ -162,7 +197,7 @@ export function AskScreen() {
         <button
           type="submit"
           disabled={!draft.trim() || pending}
-          className="h-12 rounded-lg bg-accent px-5 text-sm font-medium text-white disabled:opacity-50"
+          className="h-12 rounded-lg bg-accent-fill px-5 text-sm font-medium text-white disabled:opacity-50"
         >
           Send
         </button>

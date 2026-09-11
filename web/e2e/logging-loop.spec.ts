@@ -12,7 +12,7 @@ test("log a complete workout start to finish", async ({ page }) => {
 
   await page.goto("/register");
   await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password").fill("supersecurepw123");
+  await page.getByLabel("Password", { exact: true }).fill("supersecurepw123");
   await page.getByRole("button", { name: "Create account" }).click();
   await expect(page).toHaveURL("/");
 

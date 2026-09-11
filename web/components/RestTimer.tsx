@@ -38,11 +38,16 @@ function playBeep(context: AudioContext): void {
 /** Mount this with a `key` that changes every time a set is saved — remounting
  * is what (re)starts the countdown, rather than resetting state from an effect
  * on a changing prop. */
-export function RestTimer() {
+export function RestTimer({ onDismiss }: { onDismiss?: () => void }) {
   const [defaultSeconds, setDefaultSeconds] = useState<number>(loadDefaultSeconds);
   const [remaining, setRemaining] = useState<number>(defaultSeconds);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const firedRef = useRef(false);
+
+  const minutes = Math.floor(remaining / 60);
+  const seconds = remaining % 60;
+  const isDone = remaining <= 0;
+  const progress = Math.min(1, Math.max(0, remaining / defaultSeconds));
 
   useEffect(() => {
     try {
@@ -53,7 +58,28 @@ export function RestTimer() {
     } catch {
       // audio unsupported or blocked — the visible countdown still works
     }
+    return () => {
+      try {
+        void audioCtxRef.current?.close();
+      } catch {
+        // never throw from unmount cleanup
+      }
+      audioCtxRef.current = null;
+    };
   }, []);
+
+  // Mirror the countdown into the tab title so a glance at the tab (or a
+  // phone left on the floor) shows the remaining rest.
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const previous = document.title;
+    if (remaining > 0) {
+      document.title = `(${minutes}:${String(seconds).padStart(2, "0")}) LiftLog`;
+    }
+    return () => {
+      document.title = previous;
+    };
+  }, [remaining, minutes, seconds]);
 
   useEffect(() => {
     if (remaining <= 0) {
@@ -72,45 +98,62 @@ export function RestTimer() {
     const next = Math.max(15, defaultSeconds + deltaSeconds);
     setDefaultSeconds(next);
     saveDefaultSeconds(next);
-    setRemaining((r) => Math.max(0, r + deltaSeconds));
+    // Never let −15 auto-trigger the done fanfare from a button press:
+    // clamping at 1s means the beep only fires when the countdown itself
+    // reaches zero. There is an explicit dismiss for skipping.
+    setRemaining((r) => (r <= 0 ? 0 : Math.max(1, r + deltaSeconds)));
   }
-
-  const minutes = Math.floor(remaining / 60);
-  const seconds = remaining % 60;
-  const isDone = remaining <= 0;
 
   return (
     <div
-      className={`flex items-center justify-between rounded-xl border px-4 py-3 ${
+      className={`flex flex-col gap-2 rounded-xl border px-4 py-3 ${
         isDone ? "border-success bg-success/10" : "border-border bg-surface"
       }`}
       role="timer"
     >
-      <div className="flex items-center gap-3">
-        <span className="text-xs font-medium uppercase tracking-wide text-muted">
-          {isDone ? "Rest done" : "Resting"}
-        </span>
-        <span className="tabular-nums text-2xl font-semibold">
-          {minutes}:{String(seconds).padStart(2, "0")}
-        </span>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-medium uppercase tracking-wide text-muted">
+            {isDone ? "Rest done" : "Resting"}
+          </span>
+          <span className="tabular-nums text-2xl font-semibold">
+            {minutes}:{String(seconds).padStart(2, "0")}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => adjust(-15)}
+            className="flex h-11 min-w-12 shrink-0 items-center justify-center rounded-full border border-border px-3 text-xs text-muted"
+            aria-label="Subtract 15 seconds"
+          >
+            −15
+          </button>
+          <button
+            type="button"
+            onClick={() => adjust(15)}
+            className="flex h-11 min-w-12 shrink-0 items-center justify-center rounded-full border border-border px-3 text-xs text-muted"
+            aria-label="Add 15 seconds"
+          >
+            +15
+          </button>
+          {onDismiss && (
+            <button
+              type="button"
+              onClick={onDismiss}
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border text-base text-muted"
+              aria-label="Dismiss rest timer"
+            >
+              ×
+            </button>
+          )}
+        </div>
       </div>
-      <div className="flex gap-2">
-        <button
-          type="button"
-          onClick={() => adjust(-15)}
-          className="h-9 w-11 shrink-0 rounded-full border border-border text-xs text-muted"
-          aria-label="Subtract 15 seconds"
-        >
-          −15
-        </button>
-        <button
-          type="button"
-          onClick={() => adjust(15)}
-          className="h-9 w-11 shrink-0 rounded-full border border-border text-xs text-muted"
-          aria-label="Add 15 seconds"
-        >
-          +15
-        </button>
+      <div className="h-1 overflow-hidden rounded-full bg-border" aria-hidden="true">
+        <div
+          className={`h-full rounded-full transition-[width] duration-1000 ${isDone ? "bg-success" : "bg-accent"}`}
+          style={{ width: `${Math.round(progress * 100)}%` }}
+        />
       </div>
     </div>
   );

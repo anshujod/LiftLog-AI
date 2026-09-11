@@ -10,6 +10,9 @@ import {
 } from "@/lib/api/exercises";
 import { LOAD_TYPE_LABELS } from "@/lib/loadTypes";
 import { ApiError } from "@/lib/api/errors";
+import { ErrorNote } from "@/components/ui/ErrorNote";
+import { Sheet } from "@/components/ui/Sheet";
+import { SkeletonStack } from "@/components/ui/Skeleton";
 
 interface ExercisePickerProps {
   onSelect: (exercise: Exercise) => void;
@@ -60,27 +63,20 @@ export function ExercisePicker({
 
   const listBody = (
     <>
-      <div className="flex items-center gap-2 px-4 pt-4">
+      <div className="flex items-center gap-2">
         <input
           type="search"
-          autoFocus={variant === "sheet"}
+          autoFocus={variant === "page"}
+          enterKeyHint="search"
           placeholder="Search exercises"
+          aria-label="Search exercises"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="h-12 flex-1 rounded-lg border border-border bg-surface px-4 text-base text-foreground outline-none focus:border-accent"
+          className="h-12 min-w-0 flex-1 rounded-lg border border-border bg-surface px-4 text-base text-foreground outline-none focus:border-accent"
         />
-        {variant === "sheet" && onClose && (
-          <button
-            type="button"
-            onClick={onClose}
-            className="h-12 shrink-0 rounded-lg px-3 text-sm text-muted"
-          >
-            Close
-          </button>
-        )}
       </div>
 
-      <div className="flex gap-2 overflow-x-auto px-4 pb-1 pt-3">
+      <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-2 pt-1">
         <FilterChip label="All" active={activeGroup === null} onClick={() => setActiveGroup(null)} />
         {muscleGroups.map((group) => (
           <FilterChip
@@ -93,24 +89,22 @@ export function ExercisePicker({
       </div>
 
       {onAddCustom && (
-        <div className="px-4 pt-3">
-          <button
-            type="button"
-            onClick={onAddCustom}
-            className="w-full rounded-lg border border-dashed border-border py-3 text-sm text-accent"
-          >
-            + Add custom exercise
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={onAddCustom}
+          className="flex min-h-12 w-full items-center justify-center rounded-lg border border-dashed border-border px-4 text-sm text-accent"
+        >
+          + Add custom exercise
+        </button>
       )}
 
-      <div className="px-4 pb-4 pt-2">
-        {error && (
-          <p className="py-4 text-sm text-danger" role="alert">
-            {error}
-          </p>
+      <div className="flex flex-col">
+        {error && <ErrorNote message={error} />}
+        {!error && exercises === null && (
+          <div aria-busy="true" aria-label="Loading exercises">
+            <SkeletonStack rows={6} rowClassName="h-12" />
+          </div>
         )}
-        {!error && exercises === null && <ExerciseListSkeleton />}
         {!error && exercises !== null && exercises.length === 0 && (
           <p className="py-8 text-center text-sm text-muted">
             {query ? `No exercises match "${query}"` : "No exercises found"}
@@ -137,23 +131,13 @@ export function ExercisePicker({
   );
 
   if (variant === "page") {
-    return <div className="flex flex-1 flex-col">{listBody}</div>;
+    return <div className="flex flex-1 flex-col gap-3">{listBody}</div>;
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex flex-col justify-end bg-black/50"
-      role="dialog"
-      aria-modal="true"
-      aria-label={title}
-    >
-      <div className="flex max-h-[85vh] flex-col overflow-y-auto rounded-t-2xl bg-background pb-[env(safe-area-inset-bottom)]">
-        <div className="flex items-center px-4 pt-3">
-          <span className="text-sm font-medium text-muted">{title}</span>
-        </div>
-        {listBody}
-      </div>
-    </div>
+    <Sheet title={title} onClose={onClose ?? (() => {})}>
+      <div className="flex flex-col gap-3">{listBody}</div>
+    </Sheet>
   );
 }
 
@@ -170,21 +154,12 @@ function FilterChip({
     <button
       type="button"
       onClick={onClick}
-      className={`shrink-0 rounded-full border px-3 py-1.5 text-sm ${
+      aria-pressed={active}
+      className={`flex min-h-11 shrink-0 items-center rounded-full border px-4 text-sm ${
         active ? "border-accent bg-accent/10 text-accent" : "border-border text-muted"
       }`}
     >
       {label}
     </button>
-  );
-}
-
-function ExerciseListSkeleton() {
-  return (
-    <ul className="flex flex-col gap-3 py-2" aria-busy="true" aria-label="Loading exercises">
-      {Array.from({ length: 6 }).map((_, i) => (
-        <li key={i} className="h-10 animate-pulse rounded bg-surface" />
-      ))}
-    </ul>
   );
 }

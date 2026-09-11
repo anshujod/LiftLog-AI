@@ -18,6 +18,9 @@ import {
   PROGRESSION_METRICS,
 } from "@/lib/loadTypes";
 import { ApiError } from "@/lib/api/errors";
+import { Button } from "@/components/ui/Button";
+import { ErrorNote } from "@/components/ui/ErrorNote";
+import { Sheet } from "@/components/ui/Sheet";
 
 interface AddExerciseSheetProps {
   onCreated: (exercise: Exercise) => void;
@@ -64,37 +67,28 @@ export function AddExerciseSheet({ onCreated, onClose }: AddExerciseSheetProps) 
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex flex-col justify-end bg-black/50"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Add custom exercise"
-    >
+    <Sheet title="Add custom exercise" onClose={onClose} tall>
       <form
         onSubmit={handleSubmit}
-        className="flex max-h-[90vh] flex-col gap-4 overflow-y-auto rounded-t-2xl bg-background p-4 pb-[env(safe-area-inset-bottom)]"
+        className="flex flex-col gap-4"
       >
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Add custom exercise</h2>
-          <button type="button" onClick={onClose} className="text-sm text-muted">
-            Cancel
-          </button>
-        </div>
-
-        <label className="flex flex-col gap-1 text-sm text-muted">
+        <label className="flex flex-col gap-1 text-sm text-muted" htmlFor="custom-exercise-name">
           Name
           <input
+            id="custom-exercise-name"
+            name="exercise-name"
             required
-            autoFocus
             value={name}
             onChange={(e) => setName(e.target.value)}
             className="h-12 rounded-lg border border-border bg-surface px-4 text-base text-foreground outline-none focus:border-accent"
           />
         </label>
 
-        <label className="flex flex-col gap-1 text-sm text-muted">
+        <label className="flex flex-col gap-1 text-sm text-muted" htmlFor="custom-exercise-muscle">
           Muscle group
           <select
+            id="custom-exercise-muscle"
+            name="muscle-group"
             required
             value={muscleGroupId ?? ""}
             onChange={(e) => setMuscleGroupId(Number(e.target.value))}
@@ -113,7 +107,7 @@ export function AddExerciseSheet({ onCreated, onClose }: AddExerciseSheetProps) 
           {LOAD_TYPES.map((type) => (
             <label
               key={type}
-              className={`flex flex-col gap-0.5 rounded-lg border px-4 py-3 text-sm ${
+              className={`flex min-h-11 flex-col justify-center gap-0.5 rounded-lg border px-4 py-3 text-sm ${
                 loadType === type ? "border-accent bg-accent/10" : "border-border"
               }`}
             >
@@ -124,17 +118,20 @@ export function AddExerciseSheet({ onCreated, onClose }: AddExerciseSheetProps) 
                   value={type}
                   checked={loadType === type}
                   onChange={() => setLoadType(type)}
+                  className="h-5 w-5 accent-[var(--color-accent)]"
                 />
                 {LOAD_TYPE_LABELS[type]}
               </span>
-              <span className="pl-6 text-xs text-muted">{LOAD_TYPE_DESCRIPTIONS[type]}</span>
+              <span className="pl-7 text-xs text-muted">{LOAD_TYPE_DESCRIPTIONS[type]}</span>
             </label>
           ))}
         </fieldset>
 
-        <label className="flex flex-col gap-1 text-sm text-muted">
+        <label className="flex flex-col gap-1 text-sm text-muted" htmlFor="custom-exercise-metric">
           Track progress by
           <select
+            id="custom-exercise-metric"
+            name="progression-metric"
             value={progressionMetric}
             onChange={(e) => setProgressionMetric(e.target.value as ProgressionMetric)}
             className="h-12 rounded-lg border border-border bg-surface px-4 text-base text-foreground outline-none focus:border-accent"
@@ -148,20 +145,20 @@ export function AddExerciseSheet({ onCreated, onClose }: AddExerciseSheetProps) 
           <span className="text-xs">{PROGRESSION_METRIC_DESCRIPTIONS[progressionMetric]}</span>
         </label>
 
-        {error && (
-          <p role="alert" className="text-sm text-danger">
-            {error}
-          </p>
-        )}
+        {error && <ErrorNote message={error} />}
 
-        <button
+        <Button
           type="submit"
-          disabled={submitting || muscleGroupId === null}
-          className="h-12 rounded-lg bg-accent text-base font-medium text-white disabled:opacity-60"
+          variant="primary"
+          size="md"
+          className="w-full"
+          loading={submitting}
+          loadingLabel="Adding…"
+          disabled={muscleGroupId === null}
         >
-          {submitting ? "Adding…" : "Add exercise"}
-        </button>
+          Add exercise
+        </Button>
       </form>
-    </div>
+    </Sheet>
   );
 }
