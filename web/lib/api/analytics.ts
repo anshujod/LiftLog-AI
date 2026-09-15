@@ -1,7 +1,7 @@
 import { apiFetch } from "./client";
 import type { components } from "./schema";
 
-export type Period = "30d" | "90d" | "1y" | "all";
+export type Period = "7d" | "30d" | "90d" | "1y" | "all";
 export type Granularity = "week" | "month";
 
 export type Dashboard = components["schemas"]["DashboardOut"];

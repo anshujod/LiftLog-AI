@@ -33,9 +33,15 @@ from app.schemas.analytics import (
 from app.schemas.load import LoadValue
 from app.schemas.workout import NewPROut, WorkoutSummaryOut
 
-Period = Literal["30d", "90d", "1y", "all"]
+Period = Literal["7d", "30d", "90d", "1y", "all"]
 
-_PERIOD_DAYS: dict[Period, int | None] = {"30d": 30, "90d": 90, "1y": 365, "all": None}
+_PERIOD_DAYS: dict[Period, int | None] = {
+    "7d": 7,
+    "30d": 30,
+    "90d": 90,
+    "1y": 365,
+    "all": None,
+}
 
 _DASHBOARD_WINDOW_DAYS = 30
 _TOP_IMPROVING_WINDOW_DAYS = 90
@@ -158,6 +164,13 @@ def get_muscle_group_volume(db: Session, user: User, period: Period) -> list[Mus
     records = [_to_exercise_set_record(r) for r in rows]
     results = volume_by_muscle_group(records, user.bodyweight_g)
 
+    last_trained: dict[str, date] = {}
+    for workout_set, performed_on, _workout_id, _exercise, slug in rows:
+        if workout_set.is_warmup:
+            continue
+        if slug not in last_trained or performed_on > last_trained[slug]:
+            last_trained[slug] = performed_on
+
     name_by_slug = {g.slug: g.name for g in exercise_repository.list_muscle_groups(db)}
     unit = _unit(user)
     return [
@@ -166,6 +179,7 @@ def get_muscle_group_volume(db: Session, user: User, period: Period) -> list[Mus
             muscle_group_name=name_by_slug.get(r.muscle_group_slug, r.muscle_group_slug),
             volume=_load_value(r.total_volume_g, unit),
             working_set_count=r.working_set_count,
+            last_trained_on=last_trained.get(r.muscle_group_slug),
         )
         for r in results
     ]

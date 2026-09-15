@@ -39,7 +39,13 @@ from app.schemas.load import LoadValue
 from app.services import analytics_service, exercise_service
 from app.services.analytics_service import Period
 
-_PERIOD_DAYS: dict[Period, int | None] = {"30d": 30, "90d": 90, "1y": 365, "all": None}
+_PERIOD_DAYS: dict[Period, int | None] = {
+    "7d": 7,
+    "30d": 30,
+    "90d": 90,
+    "1y": 365,
+    "all": None,
+}
 
 _RECENT_SESSION_LIMIT = 5
 
