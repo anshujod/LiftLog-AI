@@ -6,7 +6,13 @@ from sqlalchemy.orm import Session
 from app.core.dependencies import get_current_user
 from app.db.models import User
 from app.db.session import get_db
-from app.schemas.analytics import DashboardOut, MuscleGroupVolumeOut, PlateauOut, VolumeByPeriodOut
+from app.schemas.analytics import (
+    DashboardOut,
+    MuscleGroupVolumeOut,
+    MuscleRecoveryOut,
+    PlateauOut,
+    VolumeByPeriodOut,
+)
 from app.services import analytics_service
 from app.services.analytics_service import Period
 
@@ -38,6 +44,14 @@ def get_volume(
     db: Session = Depends(get_db),
 ) -> list[VolumeByPeriodOut]:
     return analytics_service.get_volume(db, current_user, period, granularity)
+
+
+@router.get("/recovery", response_model=list[MuscleRecoveryOut])
+def get_muscle_recovery(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> list[MuscleRecoveryOut]:
+    return analytics_service.get_muscle_recovery(db, current_user)
 
 
 @router.get("/plateaus", response_model=list[PlateauOut])

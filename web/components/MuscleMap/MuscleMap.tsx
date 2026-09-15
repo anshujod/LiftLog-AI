@@ -5,10 +5,13 @@ import type { MuscleGroupVolume } from "@/lib/api/analytics";
 import { MuscleBodySvg, type BodyView } from "./MuscleBodySvg";
 import {
   ALL_MUSCLE_SLUGS,
+  GROUP_HUE,
   computeIntensityMap,
+  displayName,
   relativeDayLabel,
   trainedCount,
   type IntensityLevel,
+  type MuscleSlug,
 } from "./muscleMeta";
 
 interface MuscleMapProps {
@@ -23,29 +26,41 @@ const INTENSITY_LABEL: Record<IntensityLevel, string> = {
   3: "High",
 };
 
-function Legend() {
-  const swatches: { level: IntensityLevel; label: string }[] = [
-    { level: 0, label: "Rest" },
-    { level: 1, label: "Light" },
-    { level: 2, label: "Mod" },
-    { level: 3, label: "High" },
-  ];
+function Legend({
+  groups,
+  selected,
+  onSelect,
+}: {
+  groups: MuscleGroupVolume[];
+  selected: string | null;
+  onSelect: (slug: string) => void;
+}) {
   return (
-    <div className="flex items-center justify-center gap-3 text-xs text-muted" aria-label="Intensity legend">
-      {swatches.map((s) => (
-        <span key={s.level} className="flex items-center gap-1">
-          <span
-            aria-hidden="true"
-            className="inline-block h-3 w-3 rounded-sm border border-border"
-            style={{
-              backgroundColor:
-                s.level === 0 ? "var(--color-surface-raised)" : "var(--color-accent-fill)",
-              opacity: s.level === 0 ? 1 : [0, 0.35, 0.65, 1][s.level],
-            }}
-          />
-          {s.label}
-        </span>
-      ))}
+    <div className="flex flex-col items-center gap-1">
+      <div
+        className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 text-xs text-muted"
+        aria-label="Muscle group legend"
+      >
+        {ALL_MUSCLE_SLUGS.map((slug: MuscleSlug) => (
+          <button
+            key={slug}
+            type="button"
+            onClick={() => onSelect(slug)}
+            aria-pressed={selected === slug}
+            className={`flex min-h-11 items-center gap-1 rounded-md px-1 ${
+              selected === slug ? "text-foreground" : ""
+            }`}
+          >
+            <span
+              aria-hidden="true"
+              className="inline-block h-3 w-3 rounded-sm border border-border"
+              style={{ backgroundColor: GROUP_HUE[slug] }}
+            />
+            {displayName(slug, groups)}
+          </button>
+        ))}
+      </div>
+      <p className="text-[11px] text-muted">Shade = volume this period · gray = rested</p>
     </div>
   );
 }
@@ -93,7 +108,7 @@ export function MuscleMap({ groups, periodLabel }: MuscleMapProps) {
         <MuscleBodySvg view={view} intensity={intensity} selected={selected} onSelect={toggleSelect} />
       </div>
 
-      <Legend />
+      <Legend groups={groups} selected={selected} onSelect={toggleSelect} />
 
       <div className="min-h-11 text-center text-sm" aria-live="polite">
         {selectedGroup && selectedLevel !== undefined ? (

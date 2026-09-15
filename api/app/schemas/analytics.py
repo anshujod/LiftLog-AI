@@ -9,6 +9,7 @@ from app.schemas.workout import NewPROut, WorkoutSummaryOut
 
 ProgressionMetricName = Literal["e1rm", "top_weight", "volume", "reps_at_load"]
 Direction = Literal["improving", "flat", "declining"]
+RecoveryStatusName = Literal["ready", "recovering", "rest"]
 
 
 class ProgressionOut(BaseModel):
@@ -52,6 +53,14 @@ class MuscleGroupVolumeOut(BaseModel):
     muscle_group_name: str
     volume: LoadValue
     working_set_count: int
+    last_trained_on: date | None = None
+
+
+class MuscleRecoveryOut(BaseModel):
+    muscle_group_slug: str
+    muscle_group_name: str
+    status: RecoveryStatusName
+    percent: int
     last_trained_on: date | None = None
 
 

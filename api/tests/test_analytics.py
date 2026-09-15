@@ -283,6 +283,34 @@ class TestAnalyticsPlateaus:
             assert any(p["exercise_id"] == str(pushdown_id) for p in plateaus)
 
 
+class TestAnalyticsRecovery:
+    def test_fresh_session_reports_rest_and_isolated_per_user(self, db_session: Session) -> None:
+        with TestClient(app) as client:
+            tokens_a = _register(client, f"rec-a-{uuid.uuid4()}@example.com")
+            tokens_b = _register(client, f"rec-b-{uuid.uuid4()}@example.com")
+            pushdown_id = _exercise_id(db_session, "Tricep Pushdown")  # triceps
+
+            _log_finished_workout(
+                client,
+                tokens_a,
+                pushdown_id,
+                date.today(),
+                [{"load_g": 40000, "reps": 10, "is_warmup": False}],
+            )
+
+            resp = client.get("/analytics/recovery", headers=_auth_headers(tokens_a))
+            assert resp.status_code == 200
+            by_slug = {g["muscle_group_slug"]: g for g in resp.json()}
+            assert by_slug["triceps"]["status"] == "rest"
+            assert by_slug["triceps"]["last_trained_on"] == date.today().isoformat()
+            assert by_slug["chest"]["status"] == "ready"
+            assert by_slug["chest"]["percent"] == 100
+
+            resp_b = client.get("/analytics/recovery", headers=_auth_headers(tokens_b))
+            assert resp_b.status_code == 200
+            assert all(g["status"] == "ready" for g in resp_b.json())
+
+
 class TestAnalyticsCrossUserIsolation:
     def test_dashboard_and_plateaus_do_not_leak_between_users(self, db_session: Session) -> None:
         with TestClient(app) as client:
