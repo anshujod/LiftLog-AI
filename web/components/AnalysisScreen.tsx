@@ -11,6 +11,7 @@ import {
 import { analyzeProgress, type ProgressInsight } from "@/lib/api/ai";
 import { listWorkouts, type WorkoutSummary } from "@/lib/api/workouts";
 import { SimpleBarChart, type BarPoint } from "@/components/charts/SimpleBarChart";
+import { MuscleMapCard } from "@/components/MuscleMap/MuscleMapCard";
 import { ApiError } from "@/lib/api/errors";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -135,6 +136,8 @@ export function AnalysisScreen() {
   return (
     <div className="flex flex-col gap-4 p-4">
       <h1 className="text-2xl font-semibold">Analysis</h1>
+
+      <MuscleMapCard />
 
       <Card
         title="Muscle group volume (30 days)"

@@ -16,7 +16,13 @@ from app.schemas.workout import WorkoutSummaryOut
 from app.services import analytics_service, exercise_service
 from app.services.analytics_service import Period
 
-_PERIOD_DAYS: dict[Period, int | None] = {"30d": 30, "90d": 90, "1y": 365, "all": None}
+_PERIOD_DAYS: dict[Period, int | None] = {
+    "7d": 7,
+    "30d": 30,
+    "90d": 90,
+    "1y": 365,
+    "all": None,
+}
 _HISTORY_LIMIT = 8
 _RECENT_LIMIT = 20
 
@@ -66,6 +72,8 @@ def run_tool(db: Session, user: User, name: str, arguments: dict[str, Any]) -> d
 
 def _period(arguments: dict[str, Any], default: Period = "30d") -> Period:
     period = arguments.get("period", default)
+    if period == "7d":
+        return "7d"
     if period == "30d":
         return "30d"
     if period == "90d":

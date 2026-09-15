@@ -604,7 +604,7 @@ export interface components {
              * @default 90d
              * @enum {string}
              */
-            period: "30d" | "90d" | "1y" | "all";
+            period: "7d" | "30d" | "90d" | "1y" | "all";
             /** Exercise Id */
             exercise_id?: string | null;
         };
@@ -868,6 +868,8 @@ export interface components {
             volume: components["schemas"]["LoadValue"];
             /** Working Set Count */
             working_set_count: number;
+            /** Last Trained On */
+            last_trained_on?: string | null;
         };
         /** NewPROut */
         NewPROut: {
@@ -1924,7 +1926,7 @@ export interface operations {
     get_exercise_progress_exercises__exercise_id__progress_get: {
         parameters: {
             query?: {
-                period?: "30d" | "90d" | "1y" | "all";
+                period?: "7d" | "30d" | "90d" | "1y" | "all";
             };
             header?: never;
             path: {
@@ -2646,7 +2648,7 @@ export interface operations {
     get_muscle_group_volume_analytics_muscle_groups_get: {
         parameters: {
             query?: {
-                period?: "30d" | "90d" | "1y" | "all";
+                period?: "7d" | "30d" | "90d" | "1y" | "all";
             };
             header?: never;
             path?: never;
@@ -2677,7 +2679,7 @@ export interface operations {
     get_volume_analytics_volume_get: {
         parameters: {
             query?: {
-                period?: "30d" | "90d" | "1y" | "all";
+                period?: "7d" | "30d" | "90d" | "1y" | "all";
                 granularity?: "week" | "month";
             };
             header?: never;

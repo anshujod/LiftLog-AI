@@ -52,6 +52,7 @@ class MuscleGroupVolumeOut(BaseModel):
     muscle_group_name: str
     volume: LoadValue
     working_set_count: int
+    last_trained_on: date | None = None
 
 
 class VolumeByPeriodOut(BaseModel):

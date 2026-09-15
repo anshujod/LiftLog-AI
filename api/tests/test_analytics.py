@@ -186,6 +186,43 @@ class TestAnalyticsMuscleGroups:
             assert by_slug["back"]["volume"]["grams"] == 600_000
             assert by_slug["back"]["working_set_count"] == 1
 
+    def test_seven_day_window_and_last_trained_on(self, db_session: Session) -> None:
+        with TestClient(app) as client:
+            tokens = _register(client, f"muscle7d-{uuid.uuid4()}@example.com")
+            pushdown_id = _exercise_id(db_session, "Tricep Pushdown")  # triceps
+            row_id = _exercise_id(db_session, "Barbell Row")  # back
+            today = date.today()
+
+            _log_finished_workout(
+                client,
+                tokens,
+                pushdown_id,
+                today,
+                [{"load_g": 40000, "reps": 10, "is_warmup": False}],
+            )
+            _log_finished_workout(
+                client,
+                tokens,
+                row_id,
+                today - timedelta(days=30),
+                [{"load_g": 60000, "reps": 10, "is_warmup": False}],
+            )
+
+            resp = client.get("/analytics/muscle-groups?period=7d", headers=_auth_headers(tokens))
+            assert resp.status_code == 200
+            by_slug = {g["muscle_group_slug"]: g for g in resp.json()}
+            assert set(by_slug) == {"triceps"}
+            assert by_slug["triceps"]["last_trained_on"] == today.isoformat()
+
+            resp_all = client.get(
+                "/analytics/muscle-groups?period=all", headers=_auth_headers(tokens)
+            )
+            assert resp_all.status_code == 200
+            by_slug_all = {g["muscle_group_slug"]: g for g in resp_all.json()}
+            assert (
+                by_slug_all["back"]["last_trained_on"] == (today - timedelta(days=30)).isoformat()
+            )
+
 
 class TestAnalyticsDashboard:
     def test_workout_count_and_weekly_volume_match_hand_computed_values(
