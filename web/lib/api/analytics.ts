@@ -10,6 +10,7 @@ export type MuscleGroupVolume = components["schemas"]["MuscleGroupVolumeOut"];
 export type VolumeByPeriod = components["schemas"]["VolumeByPeriodOut"];
 export type Plateau = components["schemas"]["PlateauOut"];
 export type TopImprovingExercise = components["schemas"]["TopImprovingExerciseOut"];
+export type MuscleRecovery = components["schemas"]["MuscleRecoveryOut"];
 
 export function getDashboard(): Promise<Dashboard> {
   return apiFetch<Dashboard>("/analytics/dashboard");
@@ -32,4 +33,8 @@ export function getVolume(
 
 export function getPlateaus(): Promise<Plateau[]> {
   return apiFetch<Plateau[]>("/analytics/plateaus");
+}
+
+export function getMuscleRecovery(): Promise<MuscleRecovery[]> {
+  return apiFetch<MuscleRecovery[]>("/analytics/recovery");
 }

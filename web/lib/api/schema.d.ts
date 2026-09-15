@@ -508,6 +508,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/analytics/recovery": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Muscle Recovery */
+        get: operations["get_muscle_recovery_analytics_recovery_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/analytics/plateaus": {
         parameters: {
             query?: never;
@@ -868,6 +885,22 @@ export interface components {
             volume: components["schemas"]["LoadValue"];
             /** Working Set Count */
             working_set_count: number;
+            /** Last Trained On */
+            last_trained_on?: string | null;
+        };
+        /** MuscleRecoveryOut */
+        MuscleRecoveryOut: {
+            /** Muscle Group Slug */
+            muscle_group_slug: string;
+            /** Muscle Group Name */
+            muscle_group_name: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ready" | "recovering" | "rest";
+            /** Percent */
+            percent: number;
             /** Last Trained On */
             last_trained_on?: string | null;
         };
@@ -2704,6 +2737,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_muscle_recovery_analytics_recovery_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MuscleRecoveryOut"][];
                 };
             };
         };

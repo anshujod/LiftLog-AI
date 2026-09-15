@@ -14,6 +14,7 @@ import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorNote } from "@/components/ui/ErrorNote";
 import { MuscleMapTeaser } from "@/components/MuscleMap/MuscleMapTeaser";
+import { RecoveryTeaser } from "@/components/MuscleMap/RecoveryTeaser";
 
 interface SuggestionExercise {
   id: string;
@@ -244,6 +245,7 @@ export function Dashboard() {
       )}
 
       {data && data.workout_count > 0 && <MuscleMapTeaser />}
+      {data && data.workout_count > 0 && <RecoveryTeaser />}
 
       {data && (
         <Card title="Consistency">

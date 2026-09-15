@@ -12,6 +12,7 @@ import { analyzeProgress, type ProgressInsight } from "@/lib/api/ai";
 import { listWorkouts, type WorkoutSummary } from "@/lib/api/workouts";
 import { SimpleBarChart, type BarPoint } from "@/components/charts/SimpleBarChart";
 import { MuscleMapCard } from "@/components/MuscleMap/MuscleMapCard";
+import { RecoveryCard } from "@/components/MuscleMap/RecoveryCard";
 import { ApiError } from "@/lib/api/errors";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -138,6 +139,8 @@ export function AnalysisScreen() {
       <h1 className="text-2xl font-semibold">Analysis</h1>
 
       <MuscleMapCard />
+
+      <RecoveryCard />
 
       <Card
         title="Muscle group volume (30 days)"

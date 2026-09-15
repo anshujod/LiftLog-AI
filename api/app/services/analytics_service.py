@@ -14,6 +14,7 @@ from app.analytics.aggregates import (
 from app.analytics.plateau import detect_plateau
 from app.analytics.progression import InsufficientDataResult, ProgressionResult, compute_progression
 from app.analytics.prs import PRResult, compute_prs
+from app.analytics.recovery import compute_recovery
 from app.analytics.types import ExerciseSetRecord, SetRecord
 from app.analytics.types import LoadType as AnalyticsLoadType
 from app.analytics.types import ProgressionMetric as AnalyticsProgressionMetric
@@ -24,6 +25,7 @@ from app.repositories.analytics_repository import UserSetRow
 from app.schemas.analytics import (
     DashboardOut,
     MuscleGroupVolumeOut,
+    MuscleRecoveryOut,
     PlateauOut,
     ProgressionOut,
     TopImprovingExerciseOut,
@@ -180,6 +182,25 @@ def get_muscle_group_volume(db: Session, user: User, period: Period) -> list[Mus
             volume=_load_value(r.total_volume_g, unit),
             working_set_count=r.working_set_count,
             last_trained_on=last_trained.get(r.muscle_group_slug),
+        )
+        for r in results
+    ]
+
+
+def get_muscle_recovery(db: Session, user: User) -> list[MuscleRecoveryOut]:
+    rows = analytics_repository.get_all_sets_for_user(db, user.id)
+    records = [_to_exercise_set_record(r) for r in rows]
+    groups = exercise_repository.list_muscle_groups(db)
+    results = compute_recovery(records, [g.slug for g in groups], date.today())
+
+    name_by_slug = {g.slug: g.name for g in groups}
+    return [
+        MuscleRecoveryOut(
+            muscle_group_slug=r.muscle_group_slug,
+            muscle_group_name=name_by_slug.get(r.muscle_group_slug, r.muscle_group_slug),
+            status=r.status,
+            percent=r.percent,
+            last_trained_on=r.last_trained_on,
         )
         for r in results
     ]
