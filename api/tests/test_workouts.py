@@ -135,6 +135,32 @@ class TestWorkoutEndToEnd:
             assert finish_c.json()["new_prs"] == []
 
 
+class TestFinishWithoutBodyweight:
+    def test_bodyweight_sets_without_bodyweight_return_422_not_500(
+        self, db_session: Session
+    ) -> None:
+        with TestClient(app) as client:
+            tokens = _register(client, f"nobw-{uuid.uuid4()}@example.com")
+            pullups_id = _exercise_id(db_session, "Pull-ups")  # bodyweight_added
+
+            workout = _create_workout(client, tokens)
+            we = _add_exercise(client, tokens, workout["id"], pullups_id)
+            _bulk_sets(client, tokens, we["id"], [{"load_g": 0, "reps": 10}])
+
+            finish = client.post(f"/workouts/{workout['id']}/finish", headers=_auth_headers(tokens))
+            assert finish.status_code == 422
+            assert finish.json()["error"]["code"] == "bodyweight_required"
+
+            patched = client.patch(
+                "/me", headers=_auth_headers(tokens), json={"bodyweight_g": 80000}
+            )
+            assert patched.status_code == 200
+
+            retry = client.post(f"/workouts/{workout['id']}/finish", headers=_auth_headers(tokens))
+            assert retry.status_code == 200
+            assert retry.json()["total_volume"]["grams"] == 80000 * 10
+
+
 class TestLoadValidation:
     def test_barbell_load_must_be_positive(self, db_session: Session) -> None:
         with TestClient(app) as client:
