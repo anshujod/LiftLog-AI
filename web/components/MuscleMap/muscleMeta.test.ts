@@ -42,7 +42,11 @@ describe("relativeDayLabel", () => {
   });
 
   it("labels today", () => {
-    const today = new Date().toISOString().slice(0, 10);
+    // Local calendar date (not UTC) — matches how relativeDayLabel parses input.
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(
+      now.getDate()
+    ).padStart(2, "0")}`;
     expect(relativeDayLabel(today)).toBe("today");
   });
 });

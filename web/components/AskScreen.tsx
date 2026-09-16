@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { askQuestion, type ChatAnswer, type ChatHistoryItem } from "@/lib/api/ai";
 import { ApiError } from "@/lib/api/errors";
+import { BodyweightErrorAction } from "@/components/BodyweightErrorAction";
+import { isBodyweightRequired } from "@/lib/api/bodyweight-events";
 
 const STARTER_QUESTIONS = [
   "How much has my bench improved?",
@@ -94,6 +96,7 @@ export function AskScreen() {
   const [draft, setDraft] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [needsBodyweight, setNeedsBodyweight] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -118,7 +121,12 @@ export function AskScreen() {
         { id: newId(), role: "assistant", content: answer.answer, trace: answer.tool_trace },
       ]);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Couldn't get an answer");
+      if (isBodyweightRequired(err)) {
+        setNeedsBodyweight(true);
+        setError(err instanceof ApiError ? err.message : "Body weight is needed.");
+      } else {
+        setError(err instanceof ApiError ? err.message : "Couldn't get an answer");
+      }
     } finally {
       setPending(false);
     }
@@ -174,9 +182,17 @@ export function AskScreen() {
       </div>
 
       {error && (
-        <p className="text-sm text-danger" role="alert">
-          {error}
-        </p>
+        <div className="flex flex-col items-start gap-2" role="alert">
+          <p className="text-sm text-danger">{error}</p>
+          {needsBodyweight && (
+            <BodyweightErrorAction
+              onSaved={() => {
+                setNeedsBodyweight(false);
+                setError(null);
+              }}
+            />
+          )}
+        </div>
       )}
 
       <form

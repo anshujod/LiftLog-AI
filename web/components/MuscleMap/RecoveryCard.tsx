@@ -7,6 +7,8 @@ import { Card } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { ErrorNote } from "@/components/ui/ErrorNote";
 import { Button } from "@/components/ui/Button";
+import { BodyweightErrorAction } from "@/components/BodyweightErrorAction";
+import { isBodyweightRequired, onBodyweightSaved } from "@/lib/api/bodyweight-events";
 import { MuscleBodySvg } from "./MuscleBodySvg";
 import {
   RECOVERY_HUE,
@@ -38,16 +40,23 @@ function Legend() {
 export function RecoveryCard() {
   const [groups, setGroups] = useState<MuscleRecovery[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [needsBodyweight, setNeedsBodyweight] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setError(null);
+    setNeedsBodyweight(false);
     setGroups(null);
     try {
       setGroups(await getMuscleRecovery());
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Couldn't load recovery status");
+      if (isBodyweightRequired(err)) {
+        setNeedsBodyweight(true);
+        setError(err instanceof ApiError ? err.message : "Body weight is needed.");
+      } else {
+        setError(err instanceof ApiError ? err.message : "Couldn't load recovery status");
+      }
     }
   }, []);
 
@@ -57,12 +66,30 @@ export function RecoveryCard() {
     void load();
   }, [load]);
 
+  useEffect(() => {
+    // A body-weight save anywhere heals this card without a manual retry.
+    return onBodyweightSaved(() => {
+      void load();
+    });
+  }, [load]);
+
   const bySlug = new Map((groups ?? []).map((g) => [g.muscle_group_slug, g]));
   const recoveryMap = Object.fromEntries(
     (groups ?? []).map((g) => [g.muscle_group_slug, g.status])
   ) as Record<string, RecoveryStatus>;
   const recoveringCount = (groups ?? []).filter((g) => g.status === "recovering").length;
+  const restCount = (groups ?? []).filter((g) => g.status === "rest").length;
   const selectedGroup = selected ? bySlug.get(selected) : undefined;
+
+  const headline =
+    recoveringCount === 0 && restCount === 0
+      ? "All muscle groups ready"
+      : [
+          recoveringCount > 0 ? `${recoveringCount} recovering` : null,
+          restCount > 0 ? `${restCount} need rest` : null,
+        ]
+          .filter(Boolean)
+          .join(" · ");
 
   function toggleSelect(slug: string) {
     setSelected((prev) => (prev === slug ? null : slug));
@@ -102,9 +129,13 @@ export function RecoveryCard() {
         <ErrorNote
           message={error}
           action={
-            <Button variant="secondary" size="sm" onClick={() => void load()}>
-              Retry
-            </Button>
+            needsBodyweight ? (
+              <BodyweightErrorAction onSaved={() => void load()} />
+            ) : (
+              <Button variant="secondary" size="sm" onClick={() => void load()}>
+                Retry
+              </Button>
+            )
           }
         />
       )}
@@ -116,9 +147,7 @@ export function RecoveryCard() {
       {!error && groups !== null && !collapsed && (
         <div className="flex flex-col gap-3">
           <p className="text-sm text-muted" aria-live="polite">
-            {recoveringCount === 0
-              ? "All muscle groups ready"
-              : `${recoveringCount} recovering`}
+            {headline}
           </p>
 
           <div className="flex items-start justify-center gap-6">

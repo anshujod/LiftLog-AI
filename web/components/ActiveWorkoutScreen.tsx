@@ -23,6 +23,7 @@ import {
   type WorkoutTemplateSummary,
 } from "@/lib/api/templates";
 import { ApiError } from "@/lib/api/errors";
+import { notifyBodyweightSaved } from "@/lib/api/bodyweight-events";
 
 function SyncIndicator({ pendingCount, retrying }: { pendingCount: number; retrying: boolean }) {
   if (pendingCount === 0) return null;
@@ -388,6 +389,7 @@ export function ActiveWorkoutScreen() {
           onClose={() => setShowBodyweightSheet(false)}
           onSaved={() => {
             setShowBodyweightSheet(false);
+            notifyBodyweightSaved();
             void handleFinish();
           }}
         />

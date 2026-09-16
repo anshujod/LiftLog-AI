@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { BodyweightGate } from "@/components/BodyweightGate";
 import { BottomNav } from "@/components/BottomNav";
 import { ResumeWorkoutBanner } from "@/components/ResumeWorkoutBanner";
 import { SkeletonStack } from "@/components/ui/Skeleton";
@@ -26,6 +27,7 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-xl flex-col pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] pt-[env(safe-area-inset-top)]">
       <ResumeWorkoutBanner />
+      <BodyweightGate />
       <main className="flex min-h-0 flex-1 flex-col">{children}</main>
       <BottomNav />
     </div>

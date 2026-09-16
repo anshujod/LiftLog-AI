@@ -37,7 +37,7 @@ describe("RecoveryCard", () => {
     getMuscleRecoveryMock.mockResolvedValue(recovery());
     render(<RecoveryCard />);
 
-    expect(await screen.findByText("2 recovering")).toBeInTheDocument();
+    expect(await screen.findByText("2 recovering · 1 need rest")).toBeInTheDocument();
     expect(screen.getByLabelText("Front body muscle map")).toBeInTheDocument();
     expect(screen.getByLabelText("Back body muscle map")).toBeInTheDocument();
     expect(screen.getByLabelText("Recovery legend")).toBeInTheDocument();
@@ -59,6 +59,19 @@ describe("RecoveryCard", () => {
     expect(screen.queryByLabelText("Recovery legend")).not.toBeInTheDocument();
   });
 
+  it("names rest-only state instead of claiming all-ready", async () => {
+    getMuscleRecoveryMock.mockReset();
+    getMuscleRecoveryMock.mockResolvedValue(
+      recovery().map((g) =>
+        g.status === "recovering" ? { ...g, status: "rest" as const, percent: 10 } : g
+      )
+    );
+    render(<RecoveryCard />);
+
+    expect(await screen.findByText("3 need rest")).toBeInTheDocument();
+    expect(screen.queryByText("All muscle groups ready")).not.toBeInTheDocument();
+  });
+
   it("retries after failure", async () => {
     const user = userEvent.setup();
     getMuscleRecoveryMock.mockReset();
@@ -67,7 +80,7 @@ describe("RecoveryCard", () => {
     render(<RecoveryCard />);
 
     await user.click(await screen.findByRole("button", { name: "Retry" }, { timeout: 3000 }));
-    await waitFor(() => expect(screen.getByText("2 recovering")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("2 recovering · 1 need rest")).toBeInTheDocument());
   });
 });
 
