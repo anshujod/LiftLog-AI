@@ -15,6 +15,8 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorNote } from "@/components/ui/ErrorNote";
 import { MuscleMapTeaser } from "@/components/MuscleMap/MuscleMapTeaser";
 import { RecoveryTeaser } from "@/components/MuscleMap/RecoveryTeaser";
+import { BodyweightErrorAction } from "@/components/BodyweightErrorAction";
+import { isBodyweightRequired, onBodyweightSaved } from "@/lib/api/bodyweight-events";
 
 interface SuggestionExercise {
   id: string;
@@ -70,6 +72,7 @@ export function Dashboard() {
   const activeWorkoutId = useActiveWorkoutId();
   const [data, setData] = useState<DashboardData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [needsBodyweight, setNeedsBodyweight] = useState(false);
   const [suggestion, setSuggestion] = useState<Suggestion | null>(null);
   const [weekReview, setWeekReview] = useState<WeekSummary | null>(null);
   const [weekLoading, setWeekLoading] = useState(false);
@@ -78,10 +81,16 @@ export function Dashboard() {
 
   const loadDashboard = useCallback(async () => {
     setError(null);
+    setNeedsBodyweight(false);
     try {
       setData(await getDashboard());
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Couldn't load dashboard");
+      if (isBodyweightRequired(err)) {
+        setNeedsBodyweight(true);
+        setError(err instanceof ApiError ? err.message : "Body weight is needed.");
+      } else {
+        setError(err instanceof ApiError ? err.message : "Couldn't load dashboard");
+      }
     }
   }, []);
 
@@ -101,6 +110,13 @@ export function Dashboard() {
     // Initial fetch only — Retry re-runs the same loader on demand.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadDashboard();
+  }, [loadDashboard]);
+
+  useEffect(() => {
+    // A body-weight save anywhere heals this card without a manual retry.
+    return onBodyweightSaved(() => {
+      void loadDashboard();
+    });
   }, [loadDashboard]);
 
   useEffect(() => {
@@ -141,9 +157,13 @@ export function Dashboard() {
         <ErrorNote
           message={error}
           action={
-            <Button variant="secondary" size="sm" onClick={() => void loadDashboard()}>
-              Retry
-            </Button>
+            needsBodyweight ? (
+              <BodyweightErrorAction onSaved={() => void loadDashboard()} />
+            ) : (
+              <Button variant="secondary" size="sm" onClick={() => void loadDashboard()}>
+                Retry
+              </Button>
+            )
           }
         />
       )}

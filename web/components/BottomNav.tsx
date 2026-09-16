@@ -12,7 +12,7 @@ const TABS = [
   { href: "/history", label: "History" },
 ] as const;
 
-type TabHref = (typeof TABS)[number]["href"] | "/analysis" | "/ask" | "more";
+type TabHref = (typeof TABS)[number]["href"] | "/analysis" | "/ask" | "/profile" | "more";
 
 const ICON_PATHS: Record<TabHref, string> = {
   "/": "M3 11.5 12 4l9 7.5M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9",
@@ -21,12 +21,14 @@ const ICON_PATHS: Record<TabHref, string> = {
   "/history": "M12 3a9 9 0 1 0 9 9M12 7v5l3.5 2M3 3v5h5",
   "/analysis": "M4 20V10M10 20V4M16 20v-7M22 20H2",
   "/ask": "M4 6h16v10H9l-5 4V6Z",
+  "/profile": "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM4 20c1.5-3.5 4.5-5 8-5s6.5 1.5 8 5",
   more: "M5 12h.01M12 12h.01M19 12h.01",
 };
 
 const MORE_LINKS = [
   { href: "/analysis", label: "Analysis", blurb: "Muscle volume, frequency, plateaus" },
   { href: "/ask", label: "Ask", blurb: "Chat with your training data" },
+  { href: "/profile", label: "Profile", blurb: "Body weight, units, account" },
 ] as const;
 
 function TabIcon({ path, className }: { path: string; className?: string }) {
@@ -49,7 +51,10 @@ function TabIcon({ path, className }: { path: string; className?: string }) {
 export function BottomNav() {
   const pathname = usePathname();
   const [showMore, setShowMore] = useState(false);
-  const moreActive = pathname.startsWith("/analysis") || pathname.startsWith("/ask");
+  const moreActive =
+    pathname.startsWith("/analysis") ||
+    pathname.startsWith("/ask") ||
+    pathname.startsWith("/profile");
 
   return (
     <>

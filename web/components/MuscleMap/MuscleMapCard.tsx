@@ -7,6 +7,8 @@ import { Card } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { ErrorNote } from "@/components/ui/ErrorNote";
 import { Button } from "@/components/ui/Button";
+import { BodyweightErrorAction } from "@/components/BodyweightErrorAction";
+import { isBodyweightRequired, onBodyweightSaved } from "@/lib/api/bodyweight-events";
 import { MuscleMap } from "./MuscleMap";
 
 type MapPeriod = Extract<Period, "7d" | "30d">;
@@ -20,14 +22,21 @@ export function MuscleMapCard() {
   const [period, setPeriod] = useState<MapPeriod>("7d");
   const [groups, setGroups] = useState<MuscleGroupVolume[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [needsBodyweight, setNeedsBodyweight] = useState(false);
 
   const load = useCallback(async (p: MapPeriod) => {
     setError(null);
+    setNeedsBodyweight(false);
     setGroups(null);
     try {
       setGroups(await getMuscleGroupVolume(p));
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Couldn't load muscle map");
+      if (isBodyweightRequired(err)) {
+        setNeedsBodyweight(true);
+        setError(err instanceof ApiError ? err.message : "Body weight is needed.");
+      } else {
+        setError(err instanceof ApiError ? err.message : "Couldn't load muscle map");
+      }
     }
   }, []);
 
@@ -35,6 +44,13 @@ export function MuscleMapCard() {
     // Initial + period-change fetch — Retry re-runs the same loader on demand.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void load(period);
+  }, [period, load]);
+
+  useEffect(() => {
+    // A body-weight save anywhere heals this card without a manual retry.
+    return onBodyweightSaved(() => {
+      void load(period);
+    });
   }, [period, load]);
 
   return (
@@ -68,9 +84,13 @@ export function MuscleMapCard() {
         <ErrorNote
           message={error}
           action={
-            <Button variant="secondary" size="sm" onClick={() => void load(period)}>
-              Retry
-            </Button>
+            needsBodyweight ? (
+              <BodyweightErrorAction onSaved={() => void load(period)} />
+            ) : (
+              <Button variant="secondary" size="sm" onClick={() => void load(period)}>
+                Retry
+              </Button>
+            )
           }
         />
       )}
