@@ -2,21 +2,14 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import {
-  getMuscleGroupVolume,
-  getPlateaus,
-  type MuscleGroupVolume,
-  type Plateau,
-} from "@/lib/api/analytics";
+import { getPlateaus, type Plateau } from "@/lib/api/analytics";
 import { analyzeProgress, type ProgressInsight } from "@/lib/api/ai";
 import { listWorkouts, type WorkoutSummary } from "@/lib/api/workouts";
 import { SimpleBarChart, type BarPoint } from "@/components/charts/SimpleBarChart";
 import { MuscleMapCard } from "@/components/MuscleMap/MuscleMapCard";
 import { RecoveryCard } from "@/components/MuscleMap/RecoveryCard";
-import { ApiError } from "@/lib/api/errors";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { ErrorNote } from "@/components/ui/ErrorNote";
 import { Skeleton } from "@/components/ui/Skeleton";
 
 const WORKOUT_FREQUENCY_WEEKS = 12;
@@ -55,19 +48,7 @@ function buildWeeklyFrequency(workouts: WorkoutSummary[]): BarPoint[] {
   return points;
 }
 
-function muscleGroupBars(groups: MuscleGroupVolume[]): BarPoint[] {
-  return groups
-    .slice()
-    .sort((a, b) => b.volume.grams - a.volume.grams)
-    .map((g) => ({
-      label: g.muscle_group_name,
-      value: g.volume.grams,
-      display: `${g.volume.display} · ${g.working_set_count} sets`,
-    }));
-}
-
 export function AnalysisScreen() {
-  const [muscleGroups, setMuscleGroups] = useState<MuscleGroupVolume[] | null>(null);
   const [frequency, setFrequency] = useState<BarPoint[] | null>(null);
   const [plateaus, setPlateaus] = useState<Plateau[] | null>(null);
   const [insight, setInsight] = useState<ProgressInsight | null>(null);
@@ -75,7 +56,6 @@ export function AnalysisScreen() {
   const [insightFailed, setInsightFailed] = useState(false);
   const [insightRequested, setInsightRequested] = useState(false);
   const [insightCached, setInsightCached] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   function requestInsight() {
     setInsightRequested(true);
@@ -96,14 +76,6 @@ export function AnalysisScreen() {
 
   useEffect(() => {
     let cancelled = false;
-
-    getMuscleGroupVolume("30d")
-      .then((data) => {
-        if (!cancelled) setMuscleGroups(data);
-      })
-      .catch((err) => {
-        if (!cancelled) setError(err instanceof ApiError ? err.message : "Couldn't load analysis");
-      });
 
     listWorkouts({ limit: WORKOUTS_FETCH_LIMIT })
       .then((page) => {
@@ -126,14 +98,6 @@ export function AnalysisScreen() {
     };
   }, []);
 
-  if (error) {
-    return (
-      <div className="p-4">
-        <ErrorNote message={error} />
-      </div>
-    );
-  }
-
   return (
     <div className="flex flex-col gap-4 p-4">
       <h1 className="text-2xl font-semibold">Analysis</h1>
@@ -141,27 +105,6 @@ export function AnalysisScreen() {
       <MuscleMapCard />
 
       <RecoveryCard />
-
-      <Card
-        title="Muscle group volume (30 days)"
-        action={
-          <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted">
-            Calculated
-          </span>
-        }
-      >
-        {muscleGroups === null && (
-          <div aria-busy="true">
-            <Skeleton className="h-[180px]" />
-          </div>
-        )}
-        {muscleGroups !== null && muscleGroups.length === 0 && (
-          <p className="text-sm text-muted">No sets logged in the last 30 days.</p>
-        )}
-        {muscleGroups !== null && muscleGroups.length > 0 && (
-          <SimpleBarChart data={muscleGroupBars(muscleGroups)} />
-        )}
-      </Card>
 
       <Card
         title="Workout frequency (12 weeks)"
