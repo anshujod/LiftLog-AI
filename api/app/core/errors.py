@@ -6,6 +6,8 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from app.analytics.loads import MissingBodyweightError
+
 logger = logging.getLogger("liftlog.errors")
 
 
@@ -73,6 +75,21 @@ def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(AppError)
     async def handle_app_error(request: Request, exc: AppError) -> JSONResponse:
         return error_response(exc.code, exc.message, exc.status_code, request_id_of(request))
+
+    @app.exception_handler(MissingBodyweightError)
+    async def handle_missing_bodyweight(
+        request: Request, exc: MissingBodyweightError
+    ) -> JSONResponse:
+        # Bodyweight-gated math (volume, e1RM, PRs) over bodyweight-type sets
+        # when the user never stored a body weight. Actionable 422, never a 500.
+        del exc
+        return error_response(
+            "bodyweight_required",
+            "Your body weight is needed for bodyweight exercises —"
+            " set it in your profile, then try again.",
+            422,
+            request_id_of(request),
+        )
 
     @app.exception_handler(RequestValidationError)
     async def handle_validation_error(

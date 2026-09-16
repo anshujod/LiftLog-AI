@@ -9,6 +9,7 @@ import { ExercisePicker } from "@/components/ExercisePicker";
 import { FloatingVoiceButton } from "@/components/FloatingVoiceButton";
 import { VoiceConfirmSheet, type VoiceConfirmValues } from "@/components/VoiceConfirmSheet";
 import { WorkoutExerciseCard } from "@/components/WorkoutExerciseCard";
+import { BodyweightSheet } from "@/components/BodyweightSheet";
 import { RestTimer } from "@/components/RestTimer";
 import { ErrorNote } from "@/components/ui/ErrorNote";
 import { SkeletonStack } from "@/components/ui/Skeleton";
@@ -51,6 +52,7 @@ export function ActiveWorkoutScreen() {
   const [restKey, setRestKey] = useState(0);
   const [finishing, setFinishing] = useState(false);
   const [finishError, setFinishError] = useState<string | null>(null);
+  const [showBodyweightSheet, setShowBodyweightSheet] = useState(false);
   const [templates, setTemplates] = useState<WorkoutTemplateSummary[] | null>(null);
   const [startingTemplateId, setStartingTemplateId] = useState<string | null>(null);
   const [templateError, setTemplateError] = useState<string | null>(null);
@@ -221,6 +223,13 @@ export function ActiveWorkoutScreen() {
       }
       router.push(`/workout/${activeWorkout.workout.id}`);
     } catch (err) {
+      if (err instanceof ApiError && err.code === "bodyweight_required") {
+        // Finish needs a stored body weight for bodyweight-type lifts.
+        // Ask once, save, then retry automatically.
+        setShowBodyweightSheet(true);
+        setFinishing(false);
+        return;
+      }
       setFinishError(err instanceof ApiError ? err.message : "Couldn't finish the workout");
       setFinishing(false);
     }
@@ -371,6 +380,16 @@ export function ActiveWorkoutScreen() {
           unit={unit}
           onConfirm={handleVoiceConfirm}
           onClose={() => setVoiceCommand(null)}
+        />
+      )}
+
+      {showBodyweightSheet && (
+        <BodyweightSheet
+          onClose={() => setShowBodyweightSheet(false)}
+          onSaved={() => {
+            setShowBodyweightSheet(false);
+            void handleFinish();
+          }}
         />
       )}
     </div>
