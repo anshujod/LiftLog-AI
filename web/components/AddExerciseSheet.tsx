@@ -73,26 +73,26 @@ export function AddExerciseSheet({ onCreated, onClose }: AddExerciseSheetProps) 
         className="flex flex-col gap-4"
       >
         <label className="flex flex-col gap-1 text-sm text-muted" htmlFor="custom-exercise-name">
-          Name
+          <span className="eyebrow">Name</span>
           <input
             id="custom-exercise-name"
             name="exercise-name"
             required
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="h-12 rounded-lg border border-border bg-surface px-4 text-base text-foreground outline-none focus:border-accent"
+            className="h-12 rounded-[2px] border hairline bg-sunken px-4 text-base text-foreground outline-none focus:border-acid"
           />
         </label>
 
         <label className="flex flex-col gap-1 text-sm text-muted" htmlFor="custom-exercise-muscle">
-          Muscle group
+          <span className="eyebrow">Muscle group</span>
           <select
             id="custom-exercise-muscle"
             name="muscle-group"
             required
             value={muscleGroupId ?? ""}
             onChange={(e) => setMuscleGroupId(Number(e.target.value))}
-            className="h-12 rounded-lg border border-border bg-surface px-4 text-base text-foreground outline-none focus:border-accent"
+            className="h-12 rounded-[2px] border hairline bg-sunken px-4 text-base text-foreground outline-none focus:border-acid"
           >
             {muscleGroups.map((group) => (
               <option key={group.id} value={group.id}>
@@ -103,12 +103,12 @@ export function AddExerciseSheet({ onCreated, onClose }: AddExerciseSheetProps) 
         </label>
 
         <fieldset className="flex flex-col gap-2">
-          <legend className="pb-1 text-sm text-muted">How is the load applied?</legend>
+          <legend className="eyebrow pb-1">How is the load applied?</legend>
           {LOAD_TYPES.map((type) => (
             <label
               key={type}
-              className={`flex min-h-11 flex-col justify-center gap-0.5 rounded-lg border px-4 py-3 text-sm ${
-                loadType === type ? "border-accent bg-accent/10" : "border-border"
+              className={`flex min-h-11 flex-col justify-center gap-0.5 rounded-[2px] border px-4 py-3 text-sm ${
+                loadType === type ? "border-acid bg-acid/10" : "hairline"
               }`}
             >
               <span className="flex items-center gap-2">
@@ -118,7 +118,7 @@ export function AddExerciseSheet({ onCreated, onClose }: AddExerciseSheetProps) 
                   value={type}
                   checked={loadType === type}
                   onChange={() => setLoadType(type)}
-                  className="h-5 w-5 accent-[var(--color-accent)]"
+                  className="h-5 w-5 accent-[var(--color-acid)]"
                 />
                 {LOAD_TYPE_LABELS[type]}
               </span>
@@ -128,13 +128,13 @@ export function AddExerciseSheet({ onCreated, onClose }: AddExerciseSheetProps) 
         </fieldset>
 
         <label className="flex flex-col gap-1 text-sm text-muted" htmlFor="custom-exercise-metric">
-          Track progress by
+          <span className="eyebrow">Track progress by</span>
           <select
             id="custom-exercise-metric"
             name="progression-metric"
             value={progressionMetric}
             onChange={(e) => setProgressionMetric(e.target.value as ProgressionMetric)}
-            className="h-12 rounded-lg border border-border bg-surface px-4 text-base text-foreground outline-none focus:border-accent"
+            className="h-12 rounded-[2px] border hairline bg-sunken px-4 text-base text-foreground outline-none focus:border-acid"
           >
             {PROGRESSION_METRICS.map((metric) => (
               <option key={metric} value={metric}>

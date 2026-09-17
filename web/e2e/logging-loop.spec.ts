@@ -40,7 +40,10 @@ test("log a complete workout start to finish", async ({ page }) => {
   await expect(page).toHaveURL(/\/workout\//);
 
   // Completion summary: one exercise, one working set, matching volume.
-  await expect(page.getByText("Exercises").first()).toBeVisible();
-  await expect(page.getByText("Total volume").first()).toBeVisible();
-  await expect(page.getByText("Total sets").first()).toBeVisible();
+  // Scoped to the summary region: nav chrome elsewhere on the page
+  // contains duplicate labels (hidden on this viewport).
+  const summary = page.getByTestId("workout-summary");
+  await expect(summary.getByText("Exercises")).toBeVisible();
+  await expect(summary.getByText("Total volume")).toBeVisible();
+  await expect(summary.getByText("Total sets")).toBeVisible();
 });

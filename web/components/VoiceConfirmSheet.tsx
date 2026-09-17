@@ -112,7 +112,7 @@ export function VoiceConfirmSheet({ command, library, unit, onConfirm, onClose }
         </p>
 
         {command.confidence === "low" && (
-          <p className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm" role="alert">
+          <p className="rounded-[2px] border border-amber-500/40 bg-amber-500/10 p-3 text-sm" role="alert">
             Check the numbers — voice mishears. Nothing is saved until you confirm.
           </p>
         )}
@@ -125,7 +125,7 @@ export function VoiceConfirmSheet({ command, library, unit, onConfirm, onClose }
                 key={candidate.id}
                 type="button"
                 onClick={() => setExerciseId(candidate.id)}
-                className="flex min-h-12 items-center rounded-lg border border-border px-4 text-left text-sm font-medium"
+                className="flex min-h-12 items-center rounded-[2px] border hairline px-4 text-left text-sm font-medium"
               >
                 {candidate.name}
               </button>
@@ -152,7 +152,7 @@ export function VoiceConfirmSheet({ command, library, unit, onConfirm, onClose }
                   inputMode="decimal"
                   enterKeyHint="next"
                   aria-label={`Weight in ${unit}`}
-                  className="h-12 rounded-lg border border-border bg-surface px-4 text-base text-foreground outline-none focus:border-accent"
+                  className="h-12 rounded-[2px] border hairline bg-surface px-4 text-base text-foreground outline-none focus:border-acid"
                 />
               </label>
             )}
@@ -168,7 +168,7 @@ export function VoiceConfirmSheet({ command, library, unit, onConfirm, onClose }
                   inputMode="numeric"
                   enterKeyHint="next"
                   aria-label="Reps"
-                  className="h-12 rounded-lg border border-border bg-surface px-4 text-base text-foreground outline-none focus:border-accent"
+                  className="h-12 rounded-[2px] border hairline bg-surface px-4 text-base text-foreground outline-none focus:border-acid"
                 />
               </label>
               <label className="flex flex-1 flex-col gap-1 text-sm text-muted" htmlFor="voice-sets">
@@ -181,7 +181,7 @@ export function VoiceConfirmSheet({ command, library, unit, onConfirm, onClose }
                   inputMode="numeric"
                   enterKeyHint="done"
                   aria-label="Sets"
-                  className="h-12 rounded-lg border border-border bg-surface px-4 text-base text-foreground outline-none focus:border-accent"
+                  className="h-12 rounded-[2px] border hairline bg-surface px-4 text-base text-foreground outline-none focus:border-acid"
                 />
               </label>
             </div>

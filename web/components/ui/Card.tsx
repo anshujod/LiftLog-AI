@@ -7,14 +7,18 @@ interface CardProps {
   className?: string;
 }
 
-/** Single card system: rounded-xl, bordered surface, micro-caps title. */
+/**
+ * Grouped surface — reserved for frames with a shared action
+ * (completion summary, coach evidence, muscle hero).
+ * Everything else is editorial whitespace + type, no chrome.
+ */
 export function Card({ title, action, children, className = "" }: CardProps) {
   return (
-    <section className={`flex flex-col gap-2 rounded-xl border border-border bg-surface p-4 ${className}`}>
+    <section className={`flex flex-col gap-3 rounded-[2px] border hairline bg-surface p-4 md:p-5 ${className}`}>
       {(title || action) && (
         <div className="flex items-center justify-between gap-2">
           {title && (
-            <h2 className="text-sm font-medium uppercase tracking-wide text-muted">{title}</h2>
+            <h2 className="eyebrow">{title}</h2>
           )}
           {action}
         </div>

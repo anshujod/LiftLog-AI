@@ -51,19 +51,19 @@ export function Sheet({ title, onClose, children, footer, tall = false }: SheetP
       <div
         ref={panelRef}
         tabIndex={-1}
-        className={`animate-sheet-up relative flex flex-col overflow-y-auto rounded-t-2xl bg-background pb-[env(safe-area-inset-bottom)] outline-none ${
+        className={`animate-sheet-up relative flex flex-col overflow-y-auto rounded-t-[2px] border-t hairline bg-background pb-[env(safe-area-inset-bottom)] outline-none ${
           tall ? "max-h-[90vh]" : "max-h-[85vh]"
         }`}
       >
         <div className="flex shrink-0 flex-col items-center pt-2" aria-hidden="true">
-          <span className="h-1 w-10 rounded-full bg-border" />
+          <span className="h-1 w-10 bg-border-strong" />
         </div>
         <div className="flex shrink-0 items-center justify-between px-4 py-3">
-          <h2 className="text-lg font-semibold">{title}</h2>
+          <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
           <button
             type="button"
             onClick={onClose}
-            className="flex min-h-11 min-w-11 items-center justify-center rounded-lg px-3 text-sm text-muted"
+            className="flex min-h-11 min-w-11 items-center justify-center rounded-[2px] px-3 text-sm text-muted"
           >
             Close
           </button>

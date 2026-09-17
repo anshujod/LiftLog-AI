@@ -2,134 +2,86 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
-import { Sheet } from "@/components/ui/Sheet";
+import { useActiveWorkoutId } from "@/hooks/useActiveWorkoutId";
 
-const TABS = [
-  { href: "/", label: "Home" },
-  { href: "/workout", label: "Workout" },
-  { href: "/exercises", label: "Exercises" },
-  { href: "/history", label: "History" },
+const SIDE_TABS = [
+  { href: "/", label: "Home", match: (p: string) => p === "/" },
+  { href: "/exercises", label: "Exercises", match: (p: string) => p.startsWith("/exercises") },
 ] as const;
 
-type TabHref = (typeof TABS)[number]["href"] | "/analysis" | "/ask" | "/profile" | "more";
-
-const ICON_PATHS: Record<TabHref, string> = {
-  "/": "M3 11.5 12 4l9 7.5M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9",
-  "/workout": "M4 12h16M4 12v-3M4 12v3M20 12v-3M20 12v3M8 8v8M16 8v8",
-  "/exercises": "M11 5a6 6 0 1 0 0 12 6 6 0 0 0 0-12ZM20 20l-4.5-4.5",
-  "/history": "M12 3a9 9 0 1 0 9 9M12 7v5l3.5 2M3 3v5h5",
-  "/analysis": "M4 20V10M10 20V4M16 20v-7M22 20H2",
-  "/ask": "M4 6h16v10H9l-5 4V6Z",
-  "/profile": "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM4 20c1.5-3.5 4.5-5 8-5s6.5 1.5 8 5",
-  more: "M5 12h.01M12 12h.01M19 12h.01",
-};
-
-const MORE_LINKS = [
-  { href: "/analysis", label: "Analysis", blurb: "Muscle volume, frequency, plateaus" },
-  { href: "/ask", label: "Ask", blurb: "Chat with your training data" },
-  { href: "/profile", label: "Profile", blurb: "Body weight, units, account" },
+const RIGHT_TABS = [
+  {
+    href: "/progress",
+    label: "Progress",
+    match: (p: string) =>
+      p.startsWith("/progress") || p.startsWith("/history") || p.startsWith("/analysis"),
+  },
+  {
+    href: "/ask",
+    label: "Coach",
+    match: (p: string) => p.startsWith("/ask") || p.startsWith("/coach"),
+  },
 ] as const;
 
-function TabIcon({ path, className }: { path: string; className?: string }) {
+function SideTab({
+  href,
+  label,
+  active,
+}: {
+  href: string;
+  label: string;
+  active: boolean;
+}) {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={`h-6 w-6 ${className ?? ""}`}
-      aria-hidden="true"
+    <Link
+      href={href}
+      aria-current={active ? "page" : undefined}
+      className={`flex min-h-[64px] min-w-0 flex-1 flex-col items-center justify-center gap-1.5 px-1 ${
+        active ? "text-foreground" : "text-muted"
+      }`}
     >
-      <path d={path} />
-    </svg>
+      <span aria-hidden="true" className={`h-[3px] w-8 ${active ? "bg-acid" : "bg-transparent"}`} />
+      <span className="text-[10px] font-bold uppercase tracking-[0.16em]">{label}</span>
+    </Link>
   );
 }
 
 export function BottomNav() {
   const pathname = usePathname();
-  const [showMore, setShowMore] = useState(false);
-  const moreActive =
-    pathname.startsWith("/analysis") ||
-    pathname.startsWith("/ask") ||
-    pathname.startsWith("/profile");
+  const activeWorkoutId = useActiveWorkoutId();
+  const trainActive = pathname.startsWith("/workout");
+  const trainHref = activeWorkoutId ? `/workout?resume=${activeWorkoutId}` : "/workout";
 
   return (
-    <>
-      <nav
-        className="border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]"
-        aria-label="Primary"
-      >
-        <div className="mx-auto flex w-full max-w-xl">
-          {TABS.map((tab) => {
-            const active = tab.href === "/" ? pathname === "/" : pathname.startsWith(tab.href);
-            return (
-              <Link
-                key={tab.href}
-                href={tab.href}
-                aria-current={active ? "page" : undefined}
-                className={`flex min-h-[56px] min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-lg px-1 text-xs transition-colors ${
-                  active ? "font-semibold text-foreground" : "font-normal text-muted"
-                }`}
-              >
-                <span
-                  className={`flex h-8 items-center rounded-full px-4 ${
-                    active ? "bg-accent/15 text-accent" : ""
-                  }`}
-                >
-                  <TabIcon path={ICON_PATHS[tab.href]} />
-                </span>
-                <span className="truncate">{tab.label}</span>
-              </Link>
-            );
-          })}
-          <button
-            type="button"
-            onClick={() => setShowMore(true)}
-            aria-expanded={showMore}
-            aria-current={moreActive ? "page" : undefined}
-            className={`flex min-h-[56px] min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-lg px-1 text-xs transition-colors ${
-              moreActive ? "font-semibold text-foreground" : "font-normal text-muted"
+    <nav
+      className="border-t hairline bg-background pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] md:hidden"
+      aria-label="Primary"
+    >
+      <div className="mx-auto flex w-full max-w-3xl items-stretch">
+        {SIDE_TABS.map((tab) => (
+          <SideTab key={tab.href} href={tab.href} label={tab.label} active={tab.match(pathname)} />
+        ))}
+
+        <div className="flex flex-1 items-center justify-center px-1 py-2">
+          <Link
+            href={trainHref}
+            aria-current={trainActive ? "page" : undefined}
+            aria-label={activeWorkoutId ? "Resume workout" : "Start workout"}
+            className={`slab-press flex h-[56px] w-full items-center justify-center gap-2 rounded-[2px] font-display text-lg tracking-wide ${
+              trainActive ? "bg-acid text-background" : "bg-acid text-background"
             }`}
           >
-            <span
-              className={`flex h-8 items-center rounded-full px-4 ${
-                moreActive ? "bg-accent/15 text-accent" : ""
-              }`}
-            >
-              <TabIcon path={ICON_PATHS.more} />
-            </span>
-            <span className="truncate">More</span>
-          </button>
+            {activeWorkoutId && (
+              <span aria-hidden="true" className="h-1.5 w-1.5 animate-pulse bg-background" />
+            )}
+            TRAIN
+          </Link>
         </div>
-      </nav>
 
-      {showMore && (
-        <Sheet title="More" onClose={() => setShowMore(false)}>
-          {MORE_LINKS.map((link) => {
-            const active = pathname.startsWith(link.href);
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                onClick={() => setShowMore(false)}
-                aria-current={active ? "page" : undefined}
-                className="flex min-h-12 items-center gap-3 rounded-lg border border-border px-4 py-3"
-              >
-                <span className={active ? "text-accent" : "text-muted"}>
-                  <TabIcon path={ICON_PATHS[link.href]} />
-                </span>
-                <span className="flex min-w-0 flex-col">
-                  <span className={`font-medium ${active ? "text-accent" : ""}`}>{link.label}</span>
-                  <span className="truncate text-xs text-muted">{link.blurb}</span>
-                </span>
-              </Link>
-            );
-          })}
-        </Sheet>
-      )}
-    </>
+        {RIGHT_TABS.map((tab) => (
+          <SideTab key={tab.href} href={tab.href} label={tab.label} active={tab.match(pathname)} />
+        ))}
+      </div>
+    </nav>
   );
 }

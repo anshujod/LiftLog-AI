@@ -50,10 +50,10 @@ export function LastSessionPanel({ exerciseId }: LastSessionPanelProps) {
   if (state.status === "loading") {
     return (
       <div aria-busy="true" aria-label="Loading last session">
-        <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4">
+        <div className="flex flex-col gap-2 py-1">
           <Skeleton className="h-4 w-32" />
-          <Skeleton className="h-8 w-full" />
-          <Skeleton className="h-8 w-full" />
+          <Skeleton className="h-9 w-full" />
+          <Skeleton className="h-9 w-full" />
           <Skeleton className="h-4 w-40" />
         </div>
       </div>
@@ -78,23 +78,23 @@ export function LastSessionPanel({ exerciseId }: LastSessionPanelProps) {
   const { session, bests } = data;
 
   return (
-    <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4">
-      <div className="flex items-baseline justify-between">
-        <span className="font-medium">{formatRelativeDate(session.performed_on)}</span>
-        <span className="text-sm text-muted">{formatAbsoluteDate(session.performed_on)}</span>
+    <div className="flex flex-col gap-2 py-1">
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="eyebrow">Last — {formatRelativeDate(session.performed_on)}</span>
+        <span className="text-[11px] text-faint">{formatAbsoluteDate(session.performed_on)}</span>
       </div>
 
-      <ul className="flex flex-col gap-2">
+      <ul className="flex flex-col">
         {session.sets.map((set) =>
           set.is_warmup ? (
-            <li key={set.id} className="flex items-baseline gap-2 text-muted">
-              <span className="text-xs font-medium uppercase tracking-wide">Warmup</span>
-              <span className="tabular-nums text-base">
+            <li key={set.id} className="flex items-baseline gap-2 py-0.5 text-muted">
+              <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-faint">Warmup</span>
+              <span className="tabular-nums text-[15px]">
                 {set.load.display} × {set.reps}
               </span>
             </li>
           ) : (
-            <li key={set.id} className="tabular-nums text-2xl font-semibold">
+            <li key={set.id} className="font-display tabular-nums py-0.5 text-[26px] tracking-wide">
               {set.load.display} × {set.reps}
             </li>
           )
@@ -102,11 +102,11 @@ export function LastSessionPanel({ exerciseId }: LastSessionPanelProps) {
       </ul>
 
       {(bests.weight_pr || bests.e1rm_pr) && (
-        <div className="flex flex-wrap gap-x-6 gap-y-1 border-t border-border pt-3 text-sm">
+        <div className="flex flex-wrap gap-x-6 gap-y-1 border-t hairline pt-2 text-sm">
           {bests.weight_pr && (
             <div>
               <span className="text-muted">Personal best </span>
-              <span className="tabular-nums font-medium">
+              <span className="tabular-nums font-bold text-acid">
                 {bests.weight_pr.load.display} × {bests.weight_pr.reps}
               </span>
             </div>

@@ -9,6 +9,7 @@ import { gToUnitValue, type Unit } from "@/lib/units";
 
 interface WorkoutExerciseCardProps {
   displayExercise: DisplayExercise;
+  index: number;
   unit: Unit;
   onLogSet: (values: SetRowValues) => void;
   onUpdateSet: (clientId: string, values: SetRowValues) => void;
@@ -34,6 +35,7 @@ function draftDefaults(displayExercise: DisplayExercise): SetRowValues {
 
 export function WorkoutExerciseCard({
   displayExercise,
+  index,
   unit,
   onLogSet,
   onUpdateSet,
@@ -41,8 +43,6 @@ export function WorkoutExerciseCard({
   onRemoveExercise,
 }: WorkoutExerciseCardProps) {
   const [showLastSession, setShowLastSession] = useState(false);
-  // Two-tap remove: first tap arms, second confirms. Same gym-proofing as
-  // the set-row delete.
   const [confirmingRemove, setConfirmingRemove] = useState(false);
   const confirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { exercise, sets } = displayExercise;
@@ -73,23 +73,37 @@ export function WorkoutExerciseCard({
   );
 
   return (
-    <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface-raised p-4">
-      <div className="flex items-center justify-between gap-2">
-        <button
-          type="button"
-          onClick={() => setShowLastSession((v) => !v)}
-          aria-expanded={showLastSession}
-          className="flex min-h-11 min-w-0 flex-1 items-center text-left text-lg font-semibold"
-        >
-          <span className="truncate">{exercise.name}</span>
-        </button>
+    <section className="flex flex-col gap-2 border-t-2 border-foreground/80 pt-4" aria-label={exercise.name}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-baseline gap-3">
+          <span className="font-display text-lg text-acid" aria-hidden="true">
+            {String(index + 1).padStart(2, "0")}
+          </span>
+          <button
+            type="button"
+            onClick={() => setShowLastSession((v) => !v)}
+            aria-expanded={showLastSession}
+            className="min-w-0 flex-1 text-left"
+          >
+            <span className="block truncate text-[22px] font-semibold tracking-tight">
+              {exercise.name}
+            </span>
+            <span className="mt-1 block text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
+              {workingSets.length} SETS
+              {topSet
+                ? ` · TOP ${formatLoadValue(topSet.load_g, unit)}${unit} × ${topSet.reps}`
+                : " · NO SETS YET"}{" "}
+              · <span className="underline underline-offset-4">{showLastSession ? "Hide last" : "Last"}</span>
+            </span>
+          </button>
+        </div>
         <button
           type="button"
           onClick={handleRemovePress}
-          className={`flex h-11 shrink-0 items-center justify-center rounded-lg leading-none ${
+          className={`flex h-11 shrink-0 items-center justify-center rounded-[2px] leading-none ${
             confirmingRemove
               ? "bg-danger/15 px-3 text-sm font-medium text-danger"
-              : "w-11 text-lg text-muted"
+              : "w-10 text-xl text-faint"
           }`}
           aria-label={
             confirmingRemove
@@ -100,56 +114,61 @@ export function WorkoutExerciseCard({
           {confirmingRemove ? "Sure?" : "×"}
         </button>
       </div>
-      {topSet && (
-        <p className="tabular-nums text-xs text-muted" aria-label="Session summary">
-          {workingSets.length} working · top {formatLoadValue(topSet.load_g, unit)}
-          {unit} × {topSet.reps}
-        </p>
-      )}
 
-      {showLastSession && <LastSessionPanel exerciseId={exercise.id} />}
+      {showLastSession && (
+        <div className="border-l-2 border-acid/60 pl-3">
+          <LastSessionPanel exerciseId={exercise.id} />
+        </div>
+      )}
 
       <SuggestionCard exerciseId={exercise.id} exerciseName={exercise.name} />
 
-      <div className="flex flex-col divide-y divide-border">
-        {sets.map((set) => (
-          <SetRow
-            key={set.clientId}
-            unit={unit}
-            incrementG={exercise.default_increment_g}
-            mode="logged"
-            syncStatus={set.syncStatus}
-            initial={{ load_g: set.load_g, reps: set.reps, is_warmup: set.is_warmup }}
-            onChange={(values) => onUpdateSet(set.clientId, values)}
-            onDelete={() => onDeleteSet(set.clientId)}
-          />
+      <div className="flex flex-col">
+        {sets.map((set, i) => (
+          <div key={set.clientId} className="flex items-center gap-2 border-b hairline">
+            <span className="w-6 shrink-0 tabular-nums text-xs text-faint">{i + 1}</span>
+            <div className="min-w-0 flex-1">
+              <SetRow
+                unit={unit}
+                incrementG={exercise.default_increment_g}
+                mode="logged"
+                syncStatus={set.syncStatus}
+                initial={{ load_g: set.load_g, reps: set.reps, is_warmup: set.is_warmup }}
+                onChange={(values) => onUpdateSet(set.clientId, values)}
+                onDelete={() => onDeleteSet(set.clientId)}
+              />
+            </div>
+          </div>
         ))}
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="min-w-60 flex-1">
-          <SetRow
-            key={`draft-${sets.length}`}
-            unit={unit}
-            incrementG={exercise.default_increment_g}
-            mode="draft"
-            initial={draftDefaults(displayExercise)}
-            onSave={onLogSet}
-          />
+      <div className="flex flex-col gap-2 bg-sunken/60 p-2">
+        <p className="eyebrow px-1">Current set — {workingSets.length + 1}</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="min-w-60 flex-1">
+            <SetRow
+              key={`draft-${sets.length}`}
+              unit={unit}
+              incrementG={exercise.default_increment_g}
+              mode="draft"
+              initial={draftDefaults(displayExercise)}
+              onSave={onLogSet}
+            />
+          </div>
+          {lastLoggedSet && (
+            <button
+              type="button"
+              onClick={() =>
+                onLogSet({ load_g: lastLoggedSet.load_g, reps: lastLoggedSet.reps, is_warmup: false })
+              }
+              className="flex h-14 shrink-0 items-center rounded-[2px] border hairline px-4 text-xs font-bold uppercase tracking-[0.12em] text-muted"
+            >
+              Repeat
+            </button>
+          )}
         </div>
-        {lastLoggedSet && (
-          <button
-            type="button"
-            onClick={() =>
-              onLogSet({ load_g: lastLoggedSet.load_g, reps: lastLoggedSet.reps, is_warmup: false })
-            }
-            className="flex h-11 shrink-0 items-center rounded-lg border border-border px-4 text-sm text-muted"
-          >
-            Repeat
-          </button>
-        )}
       </div>
-    </div>
+    </section>
   );
 }
 

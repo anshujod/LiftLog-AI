@@ -38,29 +38,29 @@ export function SuggestionCard({ exerciseId, exerciseName }: { exerciseId: strin
         onClick={() => void load()}
         aria-expanded={false}
         aria-controls={panelId}
-        className="min-h-[44px] self-start rounded-lg border border-dashed border-border px-4 text-sm text-accent"
+        className="min-h-[44px] self-start text-xs font-bold uppercase tracking-[0.14em] text-muted underline decoration-faint underline-offset-4"
       >
-        Suggest sets
+        + Coach suggests
       </button>
     );
   }
 
   return (
-    <div id={panelId} className="flex flex-col gap-2 rounded-lg border border-accent/40 bg-surface p-3">
+    <div id={panelId} className="flex flex-col gap-2 rounded-[2px] border-l-2 border-acid bg-surface p-3">
       <div className="flex items-center justify-between">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted">
-          Suggested for {exerciseName}
+        <p className="eyebrow">
+          Coach — Suggested
         </p>
         <button
           type="button"
           onClick={dismiss}
           aria-label="Dismiss suggestion"
-          className="flex h-11 w-11 items-center justify-center rounded-lg text-base leading-none text-muted"
+          className="flex h-11 w-11 items-center justify-center rounded-[2px] text-base leading-none text-faint"
         >
           ×
         </button>
       </div>
-      {loading && <div className="h-14 animate-pulse rounded-lg bg-surface-raised" aria-busy="true" />}
+      {loading && <div className="h-14 animate-pulse rounded-[2px] bg-surface-raised" aria-busy="true" />}
       {!loading && error && (
         <div className="flex flex-col items-start gap-2">
           <p className="text-xs text-muted">Suggestion unavailable right now.</p>
@@ -84,7 +84,7 @@ export function SuggestionCard({ exerciseId, exerciseName }: { exerciseId: strin
             ))}
           </ul>
           <p className="text-xs text-muted">{suggestion.explanation}</p>
-          <p className="text-xs text-muted">A suggestion, not instruction.</p>
+          <p className="text-xs text-faint">A suggestion, not instruction.</p>
         </>
       )}
     </div>

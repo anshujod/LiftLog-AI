@@ -12,7 +12,6 @@ import {
   type Unit,
 } from "@/lib/units";
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
 import { ErrorNote } from "@/components/ui/ErrorNote";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { notifyBodyweightSaved } from "@/lib/api/bodyweight-events";
@@ -76,7 +75,6 @@ export function ProfileScreen() {
     setUnitError(null);
     const previous = unit;
     setUnit(next);
-    // Re-render the input in the new unit from the saved value when known.
     if (me?.bodyweight_g !== null && me?.bodyweight_g !== undefined) {
       setWeightInput(String(gToUnitValue(me.bodyweight_g, next)));
     }
@@ -91,8 +89,11 @@ export function ProfileScreen() {
   }
 
   return (
-    <div className="flex flex-col gap-4 p-4">
-      <h1 className="text-2xl font-semibold">Profile</h1>
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-8 px-4 pb-10 pt-4 md:max-w-3xl">
+      <div className="flex flex-col gap-1">
+        <p className="eyebrow">Settings</p>
+        <h1 className="text-[28px] font-semibold tracking-tight">Profile</h1>
+      </div>
 
       {loadError && (
         <ErrorNote
@@ -112,47 +113,56 @@ export function ProfileScreen() {
 
       {me && (
         <>
-          <Card title="Account">
-            <p className="truncate text-sm">{me.email}</p>
-          </Card>
+          <section className="flex flex-col gap-1 border-t hairline pt-4">
+            <h2 className="eyebrow">Account</h2>
+            <p className="truncate text-[16px]">{me.email}</p>
+            <p className="text-[13px] text-muted">
+              {unit} · {me.bodyweight_g !== null ? "Bodyweight saved" : "Add bodyweight for calisthenics"}
+            </p>
+          </section>
 
-          <Card title="Body weight">
-            <p className="text-sm text-muted">
-              Needed for bodyweight exercises (pull-ups, dips, …) — volume and records
-              can&apos;t be computed without it.
+          <section className="flex flex-col gap-3 border-t hairline pt-4">
+            <h2 className="eyebrow">Bodyweight</h2>
+            <p className="max-w-md text-sm text-muted">
+              Needed for pull-ups, dips and assisted work — volume and records can&apos;t be
+              computed without it.
             </p>
             {weightError && <ErrorNote message={weightError} />}
             {weightSaved && (
-              <p role="status" className="text-sm text-success">
+              <p role="status" className="text-xs font-bold uppercase tracking-[0.14em] text-acid">
                 Saved.
               </p>
             )}
-            <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-medium">Body weight ({unit})</span>
-              <input
-                value={weightInput}
-                onChange={(e) => setWeightInput(e.target.value)}
-                inputMode="decimal"
-                autoComplete="off"
-                placeholder={unit === "kg" ? "80" : "175"}
-                aria-label={`Body weight in ${unit}`}
-                className="h-14 rounded-lg border border-border bg-surface px-4 text-xl tabular-nums focus:border-accent focus:outline-none"
-              />
-            </label>
-            <Button
-              variant="primary"
-              size="md"
-              loading={savingWeight}
-              onClick={() => void handleSaveWeight()}
-            >
-              Save body weight
-            </Button>
-          </Card>
+            <div className="flex flex-wrap items-end gap-3">
+              <label className="flex flex-col gap-1.5">
+                <span className="text-sm font-medium">Body weight ({unit})</span>
+                <input
+                  value={weightInput}
+                  onChange={(e) => setWeightInput(e.target.value)}
+                  inputMode="decimal"
+                  autoComplete="off"
+                  placeholder={unit === "kg" ? "80" : "175"}
+                  aria-label={`Body weight in ${unit}`}
+                  className="h-12 w-40 rounded-[2px] border hairline bg-sunken px-4 text-xl tabular-nums outline-none focus:border-acid"
+                />
+              </label>
+              <Button
+                variant="primary"
+                size="md"
+                className="w-fit"
+                loading={savingWeight}
+                onClick={() => void handleSaveWeight()}
+              >
+                Save body weight
+              </Button>
+            </div>
+          </section>
 
-          <Card title="Units">
+          <section className="flex flex-col gap-3 border-t hairline pt-4">
+            <h2 className="eyebrow">Units</h2>
             {unitError && <ErrorNote message={unitError} />}
             <div
-              className="flex rounded-lg border border-border p-0.5"
+              className="flex max-w-xs border hairline"
               role="radiogroup"
               aria-label="Display units"
             >
@@ -163,28 +173,31 @@ export function ProfileScreen() {
                   role="radio"
                   aria-checked={unit === u}
                   onClick={() => void handleUnitChange(u)}
-                  className={`min-h-11 flex-1 rounded-md text-sm transition-colors ${
-                    unit === u ? "bg-accent-fill font-medium text-white" : "text-muted"
+                  className={`min-h-[52px] flex-1 px-4 text-xs font-bold uppercase tracking-[0.12em] transition-colors ${
+                    unit === u ? "bg-acid text-background" : "text-muted"
                   }`}
                 >
                   {u === "kg" ? "Kilograms (kg)" : "Pounds (lb)"}
                 </button>
               ))}
             </div>
-          </Card>
+          </section>
 
-          <Button
-            variant="secondary"
-            size="md"
-            className="w-fit"
-            loading={loggingOut}
-            onClick={() => {
-              setLoggingOut(true);
-              void logout().finally(() => setLoggingOut(false));
-            }}
-          >
-            Log out
-          </Button>
+          <section className="flex flex-col gap-2 border-t hairline pt-4">
+            <h2 className="eyebrow">Account</h2>
+            <Button
+              variant="secondary"
+              size="md"
+              className="w-fit"
+              loading={loggingOut}
+              onClick={() => {
+                setLoggingOut(true);
+                void logout().finally(() => setLoggingOut(false));
+              }}
+            >
+              Log out
+            </Button>
+          </section>
         </>
       )}
     </div>

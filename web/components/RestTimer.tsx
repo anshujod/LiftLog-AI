@@ -106,25 +106,35 @@ export function RestTimer({ onDismiss }: { onDismiss?: () => void }) {
 
   return (
     <div
-      className={`flex flex-col gap-2 rounded-xl border px-4 py-3 ${
-        isDone ? "border-success bg-success/10" : "border-border bg-surface"
-      }`}
+      className={`flex flex-col gap-2 rounded-[2px] px-4 py-3 ${
+        isDone ? "bg-acid text-background" : "bg-surface"
+      } border hairline`}
       role="timer"
     >
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <span className="text-xs font-medium uppercase tracking-wide text-muted">
-            {isDone ? "Rest done" : "Resting"}
+        <div className="flex items-baseline gap-4">
+          <span
+            className={`text-[11px] font-bold uppercase tracking-[0.18em] ${
+              isDone ? "text-background/70" : "text-muted"
+            }`}
+          >
+            {isDone ? "Go" : "Rest"}
           </span>
-          <span className="tabular-nums text-2xl font-semibold">
+          <span
+            className={`numeral-giant text-[44px] leading-none ${
+              isDone ? "text-background" : "text-foreground"
+            }`}
+          >
             {minutes}:{String(seconds).padStart(2, "0")}
           </span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           <button
             type="button"
             onClick={() => adjust(-15)}
-            className="flex h-11 min-w-12 shrink-0 items-center justify-center rounded-full border border-border px-3 text-xs text-muted"
+            className={`flex h-11 min-w-12 shrink-0 items-center justify-center px-3 text-xs font-bold ${
+              isDone ? "text-background/70" : "text-muted"
+            }`}
             aria-label="Subtract 15 seconds"
           >
             −15
@@ -132,7 +142,9 @@ export function RestTimer({ onDismiss }: { onDismiss?: () => void }) {
           <button
             type="button"
             onClick={() => adjust(15)}
-            className="flex h-11 min-w-12 shrink-0 items-center justify-center rounded-full border border-border px-3 text-xs text-muted"
+            className={`flex h-11 min-w-12 shrink-0 items-center justify-center px-3 text-xs font-bold ${
+              isDone ? "text-background/70" : "text-muted"
+            }`}
             aria-label="Add 15 seconds"
           >
             +15
@@ -141,7 +153,9 @@ export function RestTimer({ onDismiss }: { onDismiss?: () => void }) {
             <button
               type="button"
               onClick={onDismiss}
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border text-base text-muted"
+              className={`flex h-11 w-10 shrink-0 items-center justify-center text-base ${
+                isDone ? "text-background" : "text-faint"
+              }`}
               aria-label="Dismiss rest timer"
             >
               ×
@@ -149,9 +163,9 @@ export function RestTimer({ onDismiss }: { onDismiss?: () => void }) {
           )}
         </div>
       </div>
-      <div className="h-1 overflow-hidden rounded-full bg-border" aria-hidden="true">
+      <div className={`h-[3px] overflow-hidden ${isDone ? "bg-background/20" : "bg-sunken"}`} aria-hidden="true">
         <div
-          className={`h-full rounded-full transition-[width] duration-1000 ${isDone ? "bg-success" : "bg-accent"}`}
+          className={`h-full transition-[width] duration-1000 ${isDone ? "bg-background" : "bg-acid"}`}
           style={{ width: `${Math.round(progress * 100)}%` }}
         />
       </div>

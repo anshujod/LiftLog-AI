@@ -26,10 +26,16 @@ import { ApiError } from "@/lib/api/errors";
 import { notifyBodyweightSaved } from "@/lib/api/bodyweight-events";
 
 function SyncIndicator({ pendingCount, retrying }: { pendingCount: number; retrying: boolean }) {
-  if (pendingCount === 0) return null;
+  if (pendingCount === 0)
+    return (
+      <span role="status" className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-acid">
+        <span className="h-1.5 w-1.5 bg-acid" aria-hidden="true" />
+        Saved
+      </span>
+    );
   return (
-    <span role="status" className="flex items-center gap-1.5 text-xs text-muted">
-      <span className="h-2 w-2 animate-pulse rounded-full bg-accent" aria-hidden="true" />
+    <span role="status" className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-muted">
+      <span className="h-1.5 w-1.5 animate-pulse bg-muted" aria-hidden="true" />
       {retrying ? "Waiting for connection…" : `Syncing… (${pendingCount})`}
     </span>
   );
@@ -63,6 +69,7 @@ export function ActiveWorkoutScreen() {
   const [voiceLibraryLoading, setVoiceLibraryLoading] = useState(false);
   const [voiceCommand, setVoiceCommand] = useState<VoiceLogCommand | null>(null);
   const [voiceNote, setVoiceNote] = useState<string | null>(null);
+  const [focusIndex, setFocusIndex] = useState(0);
   // Fresh values for the async voice callbacks without re-subscribing.
   const voiceLibraryRef = useRef<Exercise[] | null>(null);
   const unitRef = useRef(unit);
@@ -163,8 +170,16 @@ export function ActiveWorkoutScreen() {
 
   function handleAddExercise(exercise: Exercise) {
     setShowPicker(false);
-    void activeWorkout.addExercise(exercise);
+    void activeWorkout.addExercise(exercise).then(() => {
+      setFocusIndex(activeWorkout.exercises.length);
+    });
   }
+
+  // Clamped during render (no effect): stays in range as exercises are added/removed.
+  const safeFocusIndex =
+    activeWorkout.exercises.length === 0
+      ? 0
+      : Math.min(focusIndex, activeWorkout.exercises.length - 1);
 
   async function handleMicPress() {
     if (voice.status === "listening") {
@@ -238,7 +253,7 @@ export function ActiveWorkoutScreen() {
 
   if (activeWorkout.status === "resolving" || activeWorkout.status === "loading") {
     return (
-      <div className="flex flex-col p-4" role="status" aria-label="Loading workout">
+      <div className="mx-auto flex w-full max-w-xl flex-col p-4" role="status" aria-label="Loading workout">
         <SkeletonStack rows={2} />
       </div>
     );
@@ -246,7 +261,7 @@ export function ActiveWorkoutScreen() {
 
   if (activeWorkout.status === "error") {
     return (
-      <div className="p-4">
+      <div className="mx-auto w-full max-w-xl p-4">
         <ErrorNote message={activeWorkout.error ?? "Couldn't load the workout"} />
       </div>
     );
@@ -254,34 +269,48 @@ export function ActiveWorkoutScreen() {
 
   if (activeWorkout.status === "none") {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-center">
-        <p className="text-muted">No workout in progress.</p>
+      <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-8 px-4 pb-10 pt-6">
+        <div className="flex flex-col gap-3">
+          <p className="eyebrow">New workout</p>
+          <h1 className="font-display text-[clamp(36px,9vw,56px)] leading-[0.95]">
+            Start training
+            <span className="text-acid">.</span>
+          </h1>
+          <p className="max-w-md text-sm text-muted">
+            No session in progress. Start empty or from a template — exercises prefill from
+            last time.
+          </p>
+        </div>
         <button
           type="button"
           onClick={() => void activeWorkout.start()}
-          className="h-14 w-full max-w-xs rounded-lg bg-accent-fill text-lg font-medium text-white"
+          className="slab-press flex min-h-[76px] items-center justify-between bg-acid px-5 text-background"
         >
-          Start workout
+          <span className="font-display text-2xl tracking-wide">Start workout</span>
+          <span aria-hidden="true" className="font-display text-2xl">→</span>
         </button>
 
         {templates !== null && templates.length > 0 && (
-          <div className="flex w-full max-w-xs flex-col gap-2 pt-2 text-left">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted">
+          <div className="flex w-full flex-col gap-1 pt-2 text-left">
+            <p className="eyebrow border-b hairline pb-2">
               Start from a template
             </p>
-            {templates.map((template) => (
+            {templates.map((template, i) => (
               <button
                 key={template.id}
                 type="button"
                 disabled={startingTemplateId !== null}
                 onClick={() => void handleStartFromTemplate(template.id)}
-                className="flex h-12 items-center justify-between rounded-lg border border-border px-4 text-sm disabled:opacity-50"
+                className="flex min-h-[56px] items-baseline justify-between gap-3 border-b hairline py-3 text-left disabled:opacity-50"
               >
-                <span className="truncate font-medium">
-                  {template.name} · {template.exercise_count}
+                <span className="flex min-w-0 items-baseline gap-3">
+                  <span className="tabular-nums text-xs text-faint">{String(i + 1).padStart(2, "0")}</span>
+                  <span className="truncate text-lg font-semibold tracking-tight">
+                    {template.name} <span className="text-sm font-normal text-muted">· {template.exercise_count}</span>
+                  </span>
                 </span>
-                <span className="text-accent">
-                  {startingTemplateId === template.id ? "Starting…" : "Start"}
+                <span className="shrink-0 text-xs font-bold uppercase tracking-[0.14em] text-acid">
+                  {startingTemplateId === template.id ? "Starting…" : "Start →"}
                 </span>
               </button>
             ))}
@@ -294,37 +323,104 @@ export function ActiveWorkoutScreen() {
     );
   }
 
+  const totalSets = activeWorkout.exercises.reduce((n, ex) => n + ex.sets.length, 0);
+  const focused = activeWorkout.exercises[safeFocusIndex] ?? null;
+  const exerciseCount = activeWorkout.exercises.length;
+
   return (
-    <div className="flex flex-col gap-4 p-4 pb-8">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Workout</h1>
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-5 bg-sunken/40 px-4 pb-10 pt-4 md:max-w-3xl">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-[13px] text-muted" aria-live="polite">
+          {exerciseCount === 0
+            ? "No exercises yet"
+            : `Exercise ${Math.min(safeFocusIndex + 1, exerciseCount)} of ${exerciseCount} · ${totalSets} sets`}
+        </p>
         <SyncIndicator pendingCount={activeWorkout.pendingCount} retrying={activeWorkout.retrying} />
       </div>
 
+      {exerciseCount > 1 && (
+        <div className="flex items-center justify-between gap-2" role="tablist" aria-label="Exercises in this workout">
+          <button
+            type="button"
+            onClick={() => setFocusIndex(Math.max(0, safeFocusIndex - 1))}
+            disabled={safeFocusIndex <= 0}
+            aria-label="Previous exercise"
+            className="flex min-h-[48px] min-w-[48px] items-center justify-center border hairline text-lg disabled:opacity-30"
+          >
+            ←
+          </button>
+          <div className="flex items-center gap-1.5" aria-hidden="true">
+            {activeWorkout.exercises.map((ex, i) => (
+              <span
+                key={ex.workoutExerciseId}
+                className={`h-1.5 w-6 ${i === safeFocusIndex ? "bg-acid" : "bg-faint/40"}`}
+              />
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => setFocusIndex(Math.min(exerciseCount - 1, safeFocusIndex + 1))}
+            disabled={safeFocusIndex >= exerciseCount - 1}
+            aria-label="Next exercise"
+            className="flex min-h-[48px] min-w-[48px] items-center justify-center border hairline text-lg disabled:opacity-30"
+          >
+            →
+          </button>
+        </div>
+      )}
+
       {restKey > 0 && (
-        <div className="sticky top-2 z-30">
+        <div className="sticky top-2 z-30" role="region" aria-label="Rest timer">
           <RestTimer key={restKey} onDismiss={() => setRestKey(0)} />
         </div>
       )}
 
-      {activeWorkout.exercises.map((ex) => (
+      {focused && (
         <WorkoutExerciseCard
-          key={ex.workoutExerciseId}
-          displayExercise={ex}
+          key={focused.workoutExerciseId}
+          displayExercise={focused}
+          index={safeFocusIndex}
           unit={unit}
-          onLogSet={(values) => handleLogSet(ex.workoutExerciseId, values)}
-          onUpdateSet={(clientId, values) => activeWorkout.updateSet(ex.workoutExerciseId, clientId, values)}
-          onDeleteSet={(clientId) => activeWorkout.deleteSet(ex.workoutExerciseId, clientId)}
-          onRemoveExercise={() => void activeWorkout.removeExercise(ex.workoutExerciseId)}
+          onLogSet={(values) => handleLogSet(focused.workoutExerciseId, values)}
+          onUpdateSet={(clientId, values) => activeWorkout.updateSet(focused.workoutExerciseId, clientId, values)}
+          onDeleteSet={(clientId) => activeWorkout.deleteSet(focused.workoutExerciseId, clientId)}
+          onRemoveExercise={() => void activeWorkout.removeExercise(focused.workoutExerciseId)}
         />
-      ))}
+      )}
+
+      {exerciseCount > 1 && (
+        <div className="flex flex-col gap-1">
+          <p className="eyebrow">Up next</p>
+          <ul className="flex flex-col">
+            {activeWorkout.exercises.map((ex, i) => {
+              if (i === safeFocusIndex) return null;
+              const working = ex.sets.filter((s) => !s.is_warmup).length;
+              return (
+                <li key={ex.workoutExerciseId} className="border-b hairline">
+                  <button
+                    type="button"
+                    onClick={() => setFocusIndex(i)}
+                    className="flex min-h-[52px] w-full items-baseline justify-between gap-2 py-2 text-left"
+                  >
+                    <span className="truncate text-[15px]">{ex.exercise.name}</span>
+                    <span className="shrink-0 tabular-nums text-xs text-muted">
+                      {working} sets
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
 
       <button
         type="button"
         onClick={() => setShowPicker(true)}
-        className="h-12 rounded-lg border border-dashed border-border text-sm text-accent"
+        className="flex min-h-[60px] items-center justify-between border border-dashed border-faint px-4 text-left"
       >
-        + Add exercise
+        <span className="text-sm font-bold uppercase tracking-[0.14em] text-foreground">+ Add exercise</span>
+        <span aria-hidden="true" className="text-muted">→</span>
       </button>
 
       {voice.supported && (
@@ -338,16 +434,16 @@ export function ActiveWorkoutScreen() {
       {voice.status === "listening" && (
         <p
           aria-live="polite"
-          className="fixed bottom-40 left-1/2 z-40 max-w-[90vw] -translate-x-1/2 break-words rounded-2xl bg-surface px-4 py-2 text-center text-sm leading-snug shadow-lg"
+          className="fixed bottom-40 left-1/2 z-40 max-w-[90vw] -translate-x-1/2 break-words rounded-[2px] border hairline bg-surface-raised px-4 py-2 text-center text-sm leading-snug"
         >
           {voice.interim ? `“${voice.interim}…”` : "Listening… say a set like “bench 60 kilos 8 reps”."}
         </p>
       )}
 
       {voiceNote && (
-        <div className="flex items-center justify-between gap-2 rounded-lg border border-border bg-surface p-3 text-sm" role="status">
+        <div className="flex items-center justify-between gap-2 rounded-[2px] border-l-2 border-acid bg-surface p-3 text-sm" role="status">
           <span>{voiceNote}</span>
-          <button type="button" onClick={() => setVoiceNote(null)} className="flex min-h-11 shrink-0 items-center px-2 text-accent">
+          <button type="button" onClick={() => setVoiceNote(null)} className="flex min-h-11 shrink-0 items-center px-2 text-xs font-bold uppercase tracking-[0.12em] text-foreground underline underline-offset-4">
             Dismiss
           </button>
         </div>
@@ -361,13 +457,16 @@ export function ActiveWorkoutScreen() {
         type="button"
         onClick={() => void handleFinish()}
         disabled={!activeWorkout.canFinish || finishing || activeWorkout.exercises.length === 0}
-        className="h-14 rounded-lg bg-accent-fill text-lg font-medium text-white disabled:opacity-50"
+        className="slab-press sticky bottom-3 flex min-h-[72px] items-center justify-between bg-acid px-5 text-background disabled:opacity-50"
       >
-        {finishing
-          ? "Finishing…"
-          : activeWorkout.canFinish
-            ? "Finish workout"
-            : `Syncing… (${activeWorkout.pendingCount})`}
+        <span className="font-display text-2xl tracking-wide">
+          {finishing
+            ? "Finishing…"
+            : activeWorkout.canFinish
+              ? "Finish workout"
+              : `Syncing… (${activeWorkout.pendingCount})`}
+        </span>
+        <span aria-hidden="true" className="font-display text-2xl">■</span>
       </button>
 
       {showPicker && (

@@ -1,5 +1,5 @@
 import { ProgressScreen } from "@/components/ProgressScreen";
 
-export default function AnalysisPage() {
+export default function ProgressPage() {
   return <ProgressScreen />;
 }

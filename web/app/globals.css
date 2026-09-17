@@ -3,22 +3,28 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --background: #0a0a0a;
-  --foreground: #ededed;
-  --surface: #16161a;
-  --surface-raised: #1f1f24;
-  --border: #2a2a30;
-  --accent: #4f8cff;
-  /* Darker accent fill so white label text reaches WCAG AA (4.78:1).
-     --accent stays the brand/glow color for text, icons, and borders. */
-  --accent-fill: #2f6de1;
-  --danger: #ef4444;
-  --success: #22c55e;
-  /* Lightened from #8a8a92: ~3.8:1 -> ~7:1 on --surface for small text. */
-  --muted: #a1a1aa;
+  --background: #080909;
+  --foreground: #f1f1ec;
+  --surface: #0e0f0e;
+  --surface-raised: #141514;
+  --sunken: #050606;
+  --border: #1d1f1d;
+  --border-strong: #2a2d2a;
+  --accent: #c8f04a;
+  --accent-fill: #c8f04a;
+  --on-fill: #080909;
+  /* ACID — single high-energy signal. Primary action, live state,
+     PRs, positive deltas, key trend line only. Never decoration. */
+  --acid: #c8f04a;
+  --volt: #c8f04a;
+  --danger: #ff6b5b;
+  --success: #c8f04a;
+  --muted: #858a93;
+  --faint: #565b63;
+  --ink-dim: #b9bcb2;
 
-  --radius-card: 0.75rem;
-  --radius-control: 0.5rem;
+  --radius-card: 0.125rem;
+  --radius-control: 0.125rem;
   --touch-min: 2.75rem; /* 44px minimum tap target */
 }
 
@@ -27,14 +33,22 @@
   --color-foreground: var(--foreground);
   --color-surface: var(--surface);
   --color-surface-raised: var(--surface-raised);
+  --color-sunken: var(--sunken);
   --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
   --color-accent: var(--accent);
   --color-accent-fill: var(--accent-fill);
+  --color-on-fill: var(--on-fill);
+  --color-acid: var(--acid);
+  --color-volt: var(--volt);
   --color-danger: var(--danger);
   --color-success: var(--success);
   --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-ink-dim: var(--ink-dim);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-display);
 }
 
 html {
@@ -45,6 +59,58 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  letter-spacing: -0.01em;
+}
+
+/* Training-console type system. Display = condensed athletic headlines
+   and giant numerals. Eyebrow = tracked uppercase section labels. */
+.font-display {
+  font-family: var(--font-display), var(--font-geist-sans), system-ui, sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  line-height: 0.92;
+}
+
+.eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--muted);
+}
+
+.numeral-giant {
+  font-family: var(--font-display), var(--font-geist-sans), system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  line-height: 0.9;
+}
+
+.hairline {
+  border-color: color-mix(in srgb, var(--foreground) 9%, transparent);
+}
+
+/* Physical primary action: flat acid slab, hard press, no rounded SaaS pill. */
+.slab-press {
+  transition: transform 0.08s ease-out, filter 0.12s ease-out;
+}
+.slab-press:active {
+  transform: translateY(2px) scale(0.995);
+  filter: brightness(0.92);
+}
+
+/* Leader row: name left, dotted leader, value right. Editorial, no boxes. */
+.leader-row {
+  background-image: linear-gradient(to right, var(--faint) 12%, transparent 0%);
+  background-size: 5px 1px;
+  background-repeat: repeat-x;
+  background-position: 0 72%;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--volt) 28%, transparent);
 }
 
 .tabular-nums {
@@ -54,7 +120,7 @@ body {
 /* Visible keyboard focus everywhere. Unlayered, so it wins over the
    `outline-none` utilities in the Tailwind cascade layer. */
 :focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--acid);
   outline-offset: 2px;
 }
 
@@ -74,37 +140,34 @@ body {
   animation: sheet-up 0.22s ease-out;
 }
 
-/* Resume-banner entrance: fade with a slight drop so the 44px insert
-   doesn't snap the layout. */
+/* Resume-strip entrance: subtle fade so the insert doesn't snap the layout. */
 @keyframes banner-in {
   from {
-    transform: translateY(-100%);
     opacity: 0;
   }
   to {
-    transform: translateY(0);
     opacity: 1;
   }
 }
 
 .animate-banner-in {
-  animation: banner-in 0.25s ease-out;
+  animation: banner-in 0.2s ease-out;
 }
 
-/* Gentle success pulse for just-logged feedback. */
+/* Just-logged feedback: quick rise-and-settle, no color wash. */
 @keyframes log-flash {
   0% {
-    background-color: var(--color-success);
-    opacity: 0.55;
+    opacity: 0.35;
+    transform: translateY(3px);
   }
   100% {
-    background-color: transparent;
     opacity: 1;
+    transform: translateY(0);
   }
 }
 
 .animate-log-flash {
-  animation: log-flash 0.6s ease-out;
+  animation: log-flash 0.25s ease-out;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -30,14 +30,14 @@ export function RecoveryTeaser() {
 
   return (
     <Link
-      href="/analysis"
+      href="/progress"
       className="flex min-h-11 items-center justify-center gap-2 text-sm text-muted"
       aria-label={`${recovering} muscles recovering, ${rest} needing rest. See recovery status.`}
     >
       <span className="flex items-center gap-1">
         <span
           aria-hidden="true"
-          className="inline-block h-2.5 w-2.5 rounded-full"
+          className="inline-block h-2 w-2"
           style={{ backgroundColor: RECOVERY_HUE.recovering }}
         />
         {recovering} recovering
@@ -46,12 +46,12 @@ export function RecoveryTeaser() {
       <span className="flex items-center gap-1">
         <span
           aria-hidden="true"
-          className="inline-block h-2.5 w-2.5 rounded-full"
+          className="inline-block h-2 w-2"
           style={{ backgroundColor: RECOVERY_HUE.rest }}
         />
         {rest} at rest
       </span>
-      <span aria-hidden="true" className="text-accent">
+      <span aria-hidden="true" className="text-acid">
         →
       </span>
     </Link>

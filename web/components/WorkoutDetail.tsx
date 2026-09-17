@@ -20,11 +20,11 @@ interface WorkoutDetailProps {
   workoutId: string;
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function Stat({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
   return (
     <div>
-      <div className="tabular-nums text-xl font-semibold">{value}</div>
-      <div className="text-xs text-muted">{label}</div>
+      <div className={`numeral-giant text-4xl md:text-5xl ${accent ? "text-acid" : ""}`}>{value}</div>
+      <div className="eyebrow mt-1">{label}</div>
     </div>
   );
 }
@@ -144,41 +144,52 @@ export function WorkoutDetail({ workoutId }: WorkoutDetailProps) {
   if (!workout) {
     return (
       <div className="flex flex-col gap-3 p-4" aria-busy="true">
-        <div className="h-24 animate-pulse rounded-xl bg-surface" />
-        <div className="h-24 animate-pulse rounded-xl bg-surface" />
+        <div className="h-24 animate-pulse rounded-[2px] bg-surface" />
+        <div className="h-24 animate-pulse rounded-[2px] bg-surface" />
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-4 p-4">
-      <Link href="/history" className="text-sm text-muted">
-        ← History
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-8 px-4 pb-10 pt-4 md:max-w-3xl">
+      <Link href="/progress" className="text-xs font-bold uppercase tracking-[0.14em] text-muted">
+        ← Progress
       </Link>
 
       {finishSummary && (
-        <div className="flex flex-col gap-3 rounded-xl border border-success/40 bg-success/10 p-4">
-          <p className="text-lg font-semibold">Workout complete 🎉</p>
-          <div className="grid grid-cols-2 gap-3 text-sm">
+        <div
+          data-testid="workout-summary"
+          className="flex flex-col gap-6 border-t-2 border-acid pt-5"
+        >
+          <div className="flex flex-col gap-2">
+            <p className="eyebrow">Session — Complete</p>
+            <h1 className="font-display text-[clamp(48px,12vw,88px)] leading-[0.9]">
+              Done<span className="text-acid">.</span>
+            </h1>
+          </div>
+          <div className="grid grid-cols-2 gap-x-6 gap-y-6 md:grid-cols-4">
             <Stat label="Exercises" value={String(finishSummary.exercise_count)} />
             <Stat label="Total sets" value={String(finishSummary.total_working_sets)} />
             <Stat label="Total volume" value={finishSummary.total_volume.display} />
             <Stat label="Duration" value={`${finishSummary.duration_minutes} min`} />
           </div>
           {finishSummary.new_prs.length > 0 && (
-            <div className="flex flex-col gap-1 border-t border-success/30 pt-3">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted">New PRs</p>
+            <div className="flex flex-col gap-2 border-t hairline pt-4">
+              <p className="eyebrow">New PRs</p>
               {finishSummary.new_prs.map((pr) => (
-                <p key={`${pr.exercise_id}-${pr.pr_type}`} className="text-sm">
-                  <span aria-hidden="true">🏆</span> {pr.exercise_name} — {pr.value.display}
-                  {pr.reps ? ` × ${pr.reps}` : ""}
+                <p key={`${pr.exercise_id}-${pr.pr_type}`} className="flex items-baseline gap-2 text-[15px]">
+                  <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 bg-acid" />
+                  <span>
+                    {pr.exercise_name} — <span className="tabular-nums font-bold text-acid">{pr.value.display}</span>
+                    {pr.reps ? ` × ${pr.reps}` : ""}
+                  </span>
                 </p>
               ))}
             </div>
           )}
-          <div className="border-t border-success/30 pt-3">
+          <div className="border-t hairline pt-4">
             {savedTemplateId ? (
-              <p className="text-sm text-success" role="status">
+              <p className="text-sm font-bold uppercase tracking-[0.12em] text-acid" role="status">
                 Saved as a template.
               </p>
             ) : showSaveForm ? (
@@ -189,7 +200,7 @@ export function WorkoutDetail({ workoutId }: WorkoutDetailProps) {
                   void handleSaveAsTemplate();
                 }}
               >
-                <label className="text-xs font-medium uppercase tracking-wide text-muted" htmlFor="template-name">
+                <label className="eyebrow" htmlFor="template-name">
                   Template name
                 </label>
                 <input
@@ -198,21 +209,21 @@ export function WorkoutDetail({ workoutId }: WorkoutDetailProps) {
                   onChange={(e) => setTemplateName(e.target.value)}
                   placeholder={workout.title ?? "My template"}
                   maxLength={200}
-                  className="h-11 rounded-lg border border-border bg-surface px-3 text-base"
+                  className="h-12 rounded-[2px] border hairline bg-sunken px-3 text-base outline-none focus:border-acid"
                 />
                 {saveTemplateError && <ErrorNote message={saveTemplateError} />}
                 <div className="flex gap-2">
                   <button
                     type="submit"
                     disabled={!templateName.trim() || savingTemplate}
-                    className="h-11 flex-1 rounded-lg bg-accent-fill text-sm font-medium text-white disabled:opacity-50"
+                    className="slab-press h-12 flex-1 rounded-[2px] bg-acid font-display text-base tracking-wide text-background disabled:opacity-50"
                   >
                     {savingTemplate ? "Saving…" : "Save template"}
                   </button>
                   <button
                     type="button"
                     onClick={() => setShowSaveForm(false)}
-                    className="h-11 rounded-lg border border-border px-4 text-sm"
+                    className="h-12 rounded-[2px] border hairline px-4 text-sm"
                   >
                     Cancel
                   </button>
@@ -225,26 +236,27 @@ export function WorkoutDetail({ workoutId }: WorkoutDetailProps) {
                   setTemplateName(workout.title ?? "");
                   setShowSaveForm(true);
                 }}
-                className="h-11 w-full rounded-lg border border-border text-sm font-medium"
+                className="min-h-[48px] w-full text-left text-xs font-bold uppercase tracking-[0.14em] text-foreground underline decoration-faint underline-offset-4"
               >
-                Save this workout as a template
+                Save this workout as a template →
               </button>
             )}
           </div>
         </div>
       )}
 
-      <div>
-        <h1 className="text-2xl font-semibold">{workout.title ?? "Workout"}</h1>
-        <p className="text-sm text-muted">
-          {formatRelativeDate(workout.performed_on)} · {formatAbsoluteDate(workout.performed_on)}
-        </p>
+      <div className="flex flex-col gap-1 border-t hairline pt-4">
+        <p className="eyebrow">{formatRelativeDate(workout.performed_on)} · {formatAbsoluteDate(workout.performed_on)}</p>
+        <h2 className="font-display text-3xl tracking-tight">{workout.title ?? "Workout"}</h2>
       </div>
 
-      {workout.workout_exercises.map((we) => (
-        <div key={we.id} className="flex flex-col gap-2 rounded-xl border border-border bg-surface-raised p-4">
-          <p className="text-lg font-semibold">{we.exercise.name}</p>
-          <div className="flex flex-col divide-y divide-border">
+      {workout.workout_exercises.map((we, i) => (
+        <div key={we.id} className="flex flex-col gap-2 border-t hairline pt-4">
+          <p className="flex items-baseline gap-3">
+            <span className="font-display text-base text-acid">{String(i + 1).padStart(2, "0")}</span>
+            <span className="text-[17px] font-medium">{we.exercise.name}</span>
+          </p>
+          <div className="flex flex-col">
             {we.sets.map((s) => (
               <SetRow
                 key={s.id}

@@ -17,7 +17,7 @@ interface MuscleBodySvgProps {
 }
 
 /** Neutral tone for head, hands, feet — never lit by training data. */
-const NEUTRAL_FILL = "#83838c";
+const NEUTRAL_FILL = "#2a2d2a";
 
 interface MuscleProps {
   slug: string;

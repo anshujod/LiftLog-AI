@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { getHistory, type Exercise, type SessionSummary } from "@/lib/api/exercises";
 import { TrendLineChart, type TrendPoint } from "@/components/charts/TrendLineChart";
-import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/Skeleton";
 
@@ -96,10 +95,15 @@ export function ExerciseCharts({ exercise }: ExerciseChartsProps) {
     return <EmptyState title={`Not enough sessions yet to chart ${title.toLowerCase()}.`} />;
   }
 
+  const latest = series[series.length - 1];
   return (
-    <Card title={title}>
-      {note && <p className="text-xs text-muted">{note}</p>}
+    <section className="flex flex-col gap-2 border-t hairline pt-4">
+      <div className="flex items-end justify-between gap-3">
+        <h2 className="eyebrow">{title}</h2>
+        <p className="numeral-giant text-3xl text-acid">{latest.display}</p>
+      </div>
+      {note && <p className="text-xs text-faint">{note}</p>}
       <TrendLineChart data={series} />
-    </Card>
+    </section>
   );
 }
