@@ -17,6 +17,7 @@ import { MuscleMapTeaser } from "@/components/MuscleMap/MuscleMapTeaser";
 import { RecoveryTeaser } from "@/components/MuscleMap/RecoveryTeaser";
 import { BodyweightErrorAction } from "@/components/BodyweightErrorAction";
 import { isBodyweightRequired, onBodyweightSaved } from "@/lib/api/bodyweight-events";
+import { collapseRecentPrs } from "@/lib/prs";
 
 interface SuggestionExercise {
   id: string;
@@ -133,6 +134,8 @@ export function Dashboard() {
     };
   }, []);
 
+  const headlinePrs = data ? collapseRecentPrs(data.recent_prs) : [];
+
   return (
     <div className="flex flex-col gap-4 p-4">
       <h1 className="text-2xl font-semibold">LiftLog AI</h1>
@@ -223,16 +226,21 @@ export function Dashboard() {
         </Card>
       )}
 
-      {data && data.recent_prs.length > 0 && (
+      {headlinePrs.length > 0 && (
         <Card title="Recent PRs">
           <ul className="flex flex-col gap-1.5">
-            {data.recent_prs.map((pr) => (
+            {headlinePrs.map((pr) => (
               <li
-                key={`${pr.exercise_id}-${pr.pr_type}-${pr.performed_on}`}
+                key={pr.exercise_id}
                 className="flex min-w-0 items-center gap-1 text-sm"
               >
                 <span aria-hidden="true">🏆</span>
-                <span className="min-w-0 truncate">{pr.exercise_name}</span>
+                <Link
+                  href={`/exercises/${pr.exercise_id}`}
+                  className="min-w-0 truncate py-0.5 text-accent hover:underline"
+                >
+                  {pr.exercise_name}
+                </Link>
                 <span className="shrink-0">
                   — <span className="tabular-nums">{pr.value.display}</span>
                   {pr.reps ? ` × ${pr.reps}` : ""}
