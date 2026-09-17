@@ -127,15 +127,38 @@ export function Dashboard() {
 
   useEffect(() => {
     let cancelled = false;
-    loadSuggestion()
-      .then((s) => {
-        if (!cancelled) setSuggestion(s);
-      })
-      .catch(() => {
-        if (!cancelled) setSuggestion(null);
+    let started = false;
+    let rafId = 0;
+    let fallbackId: ReturnType<typeof setTimeout> | null = null;
+    const run = () => {
+      if (cancelled || started) return;
+      started = true;
+      loadSuggestion()
+        .then((s) => {
+          if (!cancelled) setSuggestion(s);
+        })
+        .catch(() => {
+          if (!cancelled) setSuggestion(null);
+        });
+    };
+    // Below-the-fold nice-to-have: let first paint (status + dashboard data)
+    // win the network, then resolve the suggestion. Same content, later slot.
+    if (typeof requestAnimationFrame !== "undefined") {
+      rafId = requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (fallbackId) clearTimeout(fallbackId);
+          run();
+        });
       });
+      // rAF never fires in a background tab — fall back to a timer.
+      fallbackId = setTimeout(run, 2000);
+    } else {
+      fallbackId = setTimeout(run, 0);
+    }
     return () => {
       cancelled = true;
+      cancelAnimationFrame(rafId);
+      if (fallbackId) clearTimeout(fallbackId);
     };
   }, []);
 

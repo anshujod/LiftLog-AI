@@ -17,6 +17,7 @@ import {
 import { getLastSession, type Exercise } from "@/lib/api/exercises";
 import { SyncQueue, loadQueue, type QueueOp } from "@/lib/workout/syncQueue";
 import { ApiError } from "@/lib/api/errors";
+import { invalidateActiveWorkoutId, setActiveWorkoutCache } from "@/hooks/useActiveWorkoutId";
 
 export interface DisplaySet {
   clientId: string;
@@ -191,26 +192,29 @@ export function useActiveWorkout(resumeId: string | null | undefined): UseActive
         const persisted = loadQueue(workoutId);
         const displayExercises = applyQueueOverlay(data.workout_exercises.map(toDisplayExercise), persisted);
 
-        const withLastSessions = await Promise.all(
-          displayExercises.map(async (ex) => {
-            try {
-              const lastSession = await getLastSession(ex.exercise.id);
-              const lastSessionSets =
-                lastSession.session?.sets
-                  .filter((s) => !s.is_warmup)
-                  .map((s) => ({ load_g: s.load.grams, reps: s.reps })) ?? [];
-              return { ...ex, lastSessionSets };
-            } catch {
-              return ex;
-            }
-          })
-        );
-
+        // Progressive hydration: the workout is fully usable without prefill
+        // data, so go ready after the single workout fetch and merge each
+        // exercise's last-session sets in as they land (same final state as
+        // awaiting them all up front, without blocking first paint).
+        // Merges are keyed by workoutExerciseId, so a late resolution can
+        // only fill its own exercise's prefill and never clobber other state.
         setWorkout(data);
-        setExercises(withLastSessions);
+        setExercises(displayExercises);
         setPendingCount(persisted.length);
         queue.resume();
         setStatus("ready");
+
+        await Promise.all(
+          displayExercises.map(async (ex) => {
+            const lastSessionSets = await fetchLastSessionSets(ex.exercise.id);
+            if (lastSessionSets.length === 0) return;
+            setExercises((prev) =>
+              prev.map((p) =>
+                p.workoutExerciseId === ex.workoutExerciseId ? { ...p, lastSessionSets } : p
+              )
+            );
+          })
+        );
       } catch (err) {
         setError(err instanceof ApiError ? err.message : "Couldn't load this workout");
         setStatus("error");
@@ -259,6 +263,7 @@ export function useActiveWorkout(resumeId: string | null | undefined): UseActive
     try {
       const created = await createWorkout();
       attachQueue(created.id);
+      setActiveWorkoutCache(created.id);
       setWorkout(created);
       setExercises([]);
       setPendingCount(0);
@@ -272,8 +277,13 @@ export function useActiveWorkout(resumeId: string | null | undefined): UseActive
   const addExercise = useCallback(
     async (exercise: Exercise) => {
       if (!workout) throw new Error("No active workout");
-      const we = await addWorkoutExercise(workout.id, exercise.id);
-      const lastSessionSets = await fetchLastSessionSets(exercise.id);
+      // The add and the prefill lookup are independent — run them together
+      // instead of sequentially. Failure semantics are unchanged: a failed add
+      // still throws before anything is appended; prefill misses stay empty.
+      const [we, lastSessionSets] = await Promise.all([
+        addWorkoutExercise(workout.id, exercise.id),
+        fetchLastSessionSets(exercise.id),
+      ]);
       setExercises((prev) => [...prev, { ...toDisplayExercise(we), lastSessionSets }]);
       return we;
     },
@@ -293,15 +303,22 @@ export function useActiveWorkout(resumeId: string | null | undefined): UseActive
     try {
       const created = await createWorkout();
       attachQueue(created.id);
+      setActiveWorkoutCache(created.id);
       setWorkout(created);
       setPendingCount(0);
 
-      const displayExercises: DisplayExercise[] = [];
-      for (const exercise of exercises) {
-        const we = await addWorkoutExercise(created.id, exercise.id);
-        const lastSessionSets = await fetchLastSessionSets(exercise.id);
-        displayExercises.push({ ...toDisplayExercise(we), lastSessionSets });
-      }
+      // Every exercise's add + prefill lookup is independent — run the whole
+      // batch concurrently instead of 2×N serial round-trips. Failure
+      // semantics are unchanged: any rejection lands in the same error state.
+      const displayExercises = await Promise.all(
+        exercises.map(async (exercise) => {
+          const [we, lastSessionSets] = await Promise.all([
+            addWorkoutExercise(created.id, exercise.id),
+            fetchLastSessionSets(exercise.id),
+          ]);
+          return { ...toDisplayExercise(we), lastSessionSets };
+        })
+      );
 
       setExercises(displayExercises);
       setStatus("ready");
@@ -383,7 +400,13 @@ export function useActiveWorkout(resumeId: string | null | undefined): UseActive
 
   const finish = useCallback(async () => {
     if (!workout) throw new Error("No active workout");
-    return finishWorkout(workout.id);
+    const summary = await finishWorkout(workout.id);
+    // The workout is no longer active — drop the cached id so banners/navs
+    // refetch instead of showing a stale resume. (The caller navigates away,
+    // which also triggers a re-check.) Failures propagate untouched with the
+    // cache intact, since the workout is still in progress then.
+    invalidateActiveWorkoutId();
+    return summary;
   }, [workout]);
 
   return {
