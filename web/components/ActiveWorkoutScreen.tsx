@@ -22,6 +22,7 @@ import {
   startWorkoutFromTemplate,
   type WorkoutTemplateSummary,
 } from "@/lib/api/templates";
+import { setActiveWorkoutCache } from "@/hooks/useActiveWorkoutId";
 import { ApiError } from "@/lib/api/errors";
 import { notifyBodyweightSaved } from "@/lib/api/bodyweight-events";
 
@@ -62,6 +63,10 @@ export function ActiveWorkoutScreen() {
   const [showBodyweightSheet, setShowBodyweightSheet] = useState(false);
   const [templates, setTemplates] = useState<WorkoutTemplateSummary[] | null>(null);
   const [startingTemplateId, setStartingTemplateId] = useState<string | null>(null);
+  // In-flight flag for the empty-start tap only: the branch unmounts as soon
+  // as the hook leaves "none" (success → workout, failure → error), so there
+  // is no stale state to clear. Purely presentational busy feedback.
+  const [startingEmpty, setStartingEmpty] = useState(false);
   const [templateError, setTemplateError] = useState<string | null>(null);
   const suggestionStartedRef = useRef(false);
 
@@ -155,6 +160,7 @@ export function ActiveWorkoutScreen() {
     setTemplateError(null);
     try {
       const workout = await startWorkoutFromTemplate(templateId);
+      setActiveWorkoutCache(workout.id);
       router.push(`/workout?resume=${workout.id}`);
     } catch (err) {
       setTemplateError(err instanceof ApiError ? err.message : "Couldn't start from the template");
@@ -170,8 +176,11 @@ export function ActiveWorkoutScreen() {
 
   function handleAddExercise(exercise: Exercise) {
     setShowPicker(false);
+    // Focus the newly appended exercise. The render clamps the index into
+    // range, so requesting "last" via a large index is exact without reading
+    // the (possibly stale) exercises array here.
     void activeWorkout.addExercise(exercise).then(() => {
-      setFocusIndex(activeWorkout.exercises.length);
+      setFocusIndex(Number.MAX_SAFE_INTEGER);
     });
   }
 
@@ -283,10 +292,17 @@ export function ActiveWorkoutScreen() {
         </div>
         <button
           type="button"
-          onClick={() => void activeWorkout.start()}
-          className="slab-press flex min-h-[76px] items-center justify-between bg-acid px-5 text-background"
+          disabled={startingEmpty}
+          aria-busy={startingEmpty || undefined}
+          onClick={() => {
+            setStartingEmpty(true);
+            void activeWorkout.start();
+          }}
+          className="slab-press flex min-h-[76px] items-center justify-between bg-acid px-5 text-background disabled:opacity-70"
         >
-          <span className="font-display text-2xl tracking-wide">Start workout</span>
+          <span className="font-display text-2xl tracking-wide">
+            {startingEmpty ? "Starting…" : "Start workout"}
+          </span>
           <span aria-hidden="true" className="font-display text-2xl">→</span>
         </button>
 
