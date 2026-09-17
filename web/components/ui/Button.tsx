@@ -6,15 +6,15 @@ type ButtonVariant = "primary" | "secondary" | "ghost" | "danger-ghost";
 type ButtonSize = "md" | "sm";
 
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
-  // bg-accent-fill keeps white label text at WCAG AA on dark.
-  primary: "bg-accent-fill text-white disabled:opacity-60",
-  secondary: "border border-border text-foreground disabled:opacity-60",
-  ghost: "text-accent disabled:opacity-60",
+  // ACID slab: the single physical primary per screen. Flat, square, confident.
+  primary: "slab-press bg-acid font-display text-[17px] tracking-wide text-background disabled:opacity-60",
+  secondary: "border hairline text-foreground disabled:opacity-60",
+  ghost: "text-foreground underline decoration-faint underline-offset-4 disabled:opacity-60",
   "danger-ghost": "text-danger disabled:opacity-60",
 };
 
 const SIZE_CLASSES: Record<ButtonSize, string> = {
-  md: "h-12 px-5 text-base",
+  md: "h-13 min-h-[52px] px-5 text-base",
   sm: "h-11 px-4 text-sm",
 };
 
@@ -42,7 +42,7 @@ export function Button({
       type="button"
       disabled={disabled || loading}
       aria-busy={loading || undefined}
-      className={`flex items-center justify-center gap-2 rounded-lg font-medium transition-opacity ${VARIANT_CLASSES[variant]} ${SIZE_CLASSES[size]} ${className}`}
+      className={`flex items-center justify-center gap-2 rounded-[2px] font-medium transition-opacity active:scale-[0.98] ${VARIANT_CLASSES[variant]} ${SIZE_CLASSES[size]} ${className}`}
       {...rest}
     >
       {loading && (

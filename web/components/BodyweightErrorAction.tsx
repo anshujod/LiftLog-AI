@@ -19,7 +19,7 @@ export function BodyweightErrorAction({ onSaved }: { onSaved: () => void }) {
         <Button variant="primary" size="sm" onClick={() => setOpen(true)}>
           Set body weight
         </Button>
-        <Link href="/profile" className="text-sm text-accent hover:underline">
+        <Link href="/profile" className="text-sm font-bold uppercase tracking-[0.12em] text-foreground underline decoration-faint underline-offset-4">
           Go to Profile
         </Link>
       </span>

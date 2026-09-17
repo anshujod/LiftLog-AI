@@ -5,13 +5,13 @@ interface ErrorNoteProps {
   action?: ReactNode;
 }
 
-/** One error presentation: bordered card with role=alert (existing
+/** One error presentation: flat hairline block with role=alert (existing
  * getByRole("alert") queries keep passing). */
 export function ErrorNote({ message, action }: ErrorNoteProps) {
   return (
     <div
       role="alert"
-      className="flex flex-col items-start gap-2 rounded-lg border border-danger/40 bg-danger/10 p-3 text-sm"
+      className="flex flex-col items-start gap-2 rounded-[2px] border-l-2 border-danger bg-surface p-3 text-sm"
     >
       <p>{message}</p>
       {action}

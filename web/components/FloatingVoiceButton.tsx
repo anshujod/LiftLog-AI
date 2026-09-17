@@ -37,8 +37,8 @@ export function FloatingVoiceButton({ listening, disabled, onPress }: FloatingVo
       disabled={disabled}
       aria-label={listening ? "Stop listening" : "Log sets by voice"}
       aria-pressed={listening}
-      className={`fixed bottom-24 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full text-white shadow-lg disabled:opacity-50 ${
-        listening ? "bg-danger ring-4 ring-danger/30" : "bg-accent"
+      className={`fixed bottom-24 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-[2px] disabled:opacity-50 ${
+        listening ? "bg-danger text-background" : "bg-acid text-background"
       }`}
     >
       {listening ? <StopIcon /> : <MicIcon />}

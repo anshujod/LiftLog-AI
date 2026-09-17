@@ -70,7 +70,7 @@ export function BodyweightSheet({ onClose, onSaved }: BodyweightSheetProps) {
           autoComplete="off"
           placeholder={unit === "kg" ? "80" : "175"}
           aria-label={`Body weight in ${unit}`}
-          className="h-14 rounded-lg border border-border bg-surface px-4 text-xl tabular-nums focus:border-accent focus:outline-none"
+          className="h-14 rounded-[2px] border hairline bg-sunken px-4 text-xl tabular-nums focus:border-acid focus:outline-none"
         />
       </label>
       <Button variant="primary" size="md" loading={saving} onClick={() => void handleSave()}>

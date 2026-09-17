@@ -22,24 +22,24 @@ export type IntensityLevel = 0 | 1 | 2 | 3;
 export type RecoveryStatus = "ready" | "recovering" | "rest";
 
 /**
- * Fixed hue per muscle group (screenshot-style), brightened for the dark card.
- * Training volume is expressed through opacity, not hue: see `fillFor`.
+ * Single-hue heatmap: acid intensity encodes volume, not rainbow hues.
+ * Training volume is expressed through opacity: see `fillFor`.
  */
 export const GROUP_HUE: Record<MuscleSlug, string> = {
-  chest: "#3ddc84",
-  back: "#38bdf8",
-  legs: "#a78bfa",
-  shoulders: "#60a5fa",
-  biceps: "#f5a623",
-  triceps: "#2dd4bf",
-  abs: "#4f8cff",
+  chest: "#c8f04a",
+  back: "#c8f04a",
+  legs: "#c8f04a",
+  shoulders: "#c8f04a",
+  biceps: "#c8f04a",
+  triceps: "#c8f04a",
+  abs: "#c8f04a",
 };
 
-/** Recovery-state paint (screenshot-style): green / amber / red. */
+/** Recovery-state paint: acid / ink / faint — editorial, no traffic lights. */
 export const RECOVERY_HUE: Record<RecoveryStatus, string> = {
-  ready: "#22c55e",
-  recovering: "#eab308",
-  rest: "#ef4444",
+  ready: "#c8f04a",
+  recovering: "#f1f1ec",
+  rest: "#565b63",
 };
 
 /** Opacity ramp for intensity levels 1-3. Level 0 renders neutral. */

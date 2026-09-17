@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getMuscleGroupVolume, type MuscleGroupVolume } from "@/lib/api/analytics";
-import { Card } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { MuscleBodySvg } from "./MuscleBodySvg";
 import { computeIntensityMap, trainedCount, ALL_MUSCLE_SLUGS } from "./muscleMeta";
@@ -28,11 +27,9 @@ export function MuscleMapTeaser() {
 
   if (groups === null) {
     return (
-      <Card title="This week">
-        <div aria-busy="true">
-          <Skeleton className="h-24" />
-        </div>
-      </Card>
+      <div aria-busy="true">
+        <Skeleton className="h-24" />
+      </div>
     );
   }
 
@@ -42,24 +39,15 @@ export function MuscleMapTeaser() {
   const trained = trainedCount(intensity);
 
   return (
-    <Card
-      title="This week"
-      action={
-        <Link href="/analysis" className="text-xs text-accent hover:underline">
-          Full map →
-        </Link>
-      }
-    >
-      <Link href="/analysis" className="flex items-center gap-4" aria-label={`Muscle map: ${trained} of ${ALL_MUSCLE_SLUGS.length} muscle groups trained this week. See full analysis.`}>
-        <MuscleBodySvg view="front" intensity={intensity} selected={null} onSelect={() => {}} compact />
-        <span className="flex min-w-0 flex-col">
-          <span className="tabular-nums text-xl font-semibold">
-            {trained}/{ALL_MUSCLE_SLUGS.length}
-          </span>
-          <span className="text-sm text-muted">muscle groups trained</span>
-          <span className="text-xs text-accent">Tap for full map →</span>
+    <Link href="/progress" className="flex items-center gap-4 border-t hairline pt-4" aria-label={`Muscle map: ${trained} of ${ALL_MUSCLE_SLUGS.length} muscle groups trained this week. See full analysis.`}>
+      <MuscleBodySvg view="front" intensity={intensity} selected={null} onSelect={() => {}} compact />
+      <span className="flex min-w-0 flex-col">
+        <span className="numeral-giant text-3xl">
+          {trained}/{ALL_MUSCLE_SLUGS.length}
         </span>
-      </Link>
-    </Card>
+        <span className="eyebrow mt-1">muscle groups trained</span>
+        <span className="pt-1 text-xs font-bold uppercase tracking-[0.14em] text-acid">Full map →</span>
+      </span>
+    </Link>
   );
 }

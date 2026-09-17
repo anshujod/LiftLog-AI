@@ -46,14 +46,14 @@ function TrendTooltip({
   if (!active || !payload?.length) return null;
   const point = payload[0].payload;
   return (
-    <div className="rounded-lg border border-border bg-surface-raised px-3 py-2 text-xs shadow-lg">
+    <div className="rounded-[2px] border hairline bg-surface-raised px-3 py-2 text-xs">
       <div className="text-muted">{formatTick(point.date, includeYear)}</div>
-      <div className="tabular-nums font-medium">{point.display}</div>
+      <div className="tabular-nums font-display text-base">{point.display}</div>
     </div>
   );
 }
 
-export function TrendLineChart({ data, color = "var(--color-accent)" }: TrendLineChartProps) {
+export function TrendLineChart({ data, color = "var(--color-acid)" }: TrendLineChartProps) {
   const dates = data.map((d) => d.date);
   const ticks = sampleTicks(dates);
   const times = dates.map((d) => new Date(`${d}T00:00:00`).getTime());
@@ -68,7 +68,7 @@ export function TrendLineChart({ data, color = "var(--color-accent)" }: TrendLin
           dataKey="date"
           ticks={ticks}
           tickFormatter={(iso: string) => formatTick(iso, includeYear)}
-          tick={{ fill: "var(--color-muted)", fontSize: 11 }}
+          tick={{ fill: "var(--color-faint)", fontSize: 11 }}
           axisLine={{ stroke: "var(--color-border)" }}
           tickLine={false}
         />
@@ -82,8 +82,8 @@ export function TrendLineChart({ data, color = "var(--color-accent)" }: TrendLin
           dataKey="value"
           stroke={color}
           strokeWidth={2}
-          dot={{ r: 4, fill: color, strokeWidth: 0 }}
-          activeDot={{ r: 8, stroke: "var(--color-surface)" }}
+          dot={{ r: 3, fill: color, strokeWidth: 0 }}
+          activeDot={{ r: 6, stroke: "var(--color-background)" }}
           isAnimationActive={false}
         />
       </LineChart>

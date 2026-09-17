@@ -77,7 +77,7 @@ export function RegisterForm() {
             disabled={submitting}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="h-12 rounded-lg border border-border bg-surface px-4 text-base text-foreground outline-none focus:border-accent"
+            className="h-12 rounded-[2px] border hairline bg-surface px-4 text-base text-foreground outline-none focus:border-acid"
           />
         </div>
         <div className="flex flex-col gap-1">
@@ -97,14 +97,14 @@ export function RegisterForm() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               aria-describedby="register-password-hint"
-              className="h-12 w-full rounded-lg border border-border bg-surface px-4 pr-14 text-base text-foreground outline-none focus:border-accent"
+              className="h-12 w-full rounded-[2px] border hairline bg-surface px-4 pr-14 text-base text-foreground outline-none focus:border-acid"
             />
             <button
               type="button"
               aria-pressed={showPassword}
               aria-label={showPassword ? "Hide password" : "Show password"}
               onClick={() => setShowPassword((v) => !v)}
-              className="absolute inset-y-0 right-0 flex h-12 w-12 items-center justify-center rounded-lg text-sm text-muted hover:text-foreground"
+              className="absolute inset-y-0 right-0 flex h-12 w-12 items-center justify-center rounded-[2px] text-sm text-muted hover:text-foreground"
             >
               {showPassword ? "Hide" : "Show"}
             </button>
@@ -126,7 +126,7 @@ export function RegisterForm() {
         </Button>
         <p className="text-center text-sm text-muted">
           Already have an account?{" "}
-          <Link href="/login" className="py-1 text-accent hover:underline">
+          <Link href="/login" className="py-1 text-acid hover:underline">
             Log in
           </Link>
         </p>

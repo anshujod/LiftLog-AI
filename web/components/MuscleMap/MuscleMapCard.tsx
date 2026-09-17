@@ -3,10 +3,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { getMuscleGroupVolume, type MuscleGroupVolume, type Period } from "@/lib/api/analytics";
 import { ApiError } from "@/lib/api/errors";
-import { Card } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { ErrorNote } from "@/components/ui/ErrorNote";
 import { Button } from "@/components/ui/Button";
+import { Segmented } from "@/components/ui/Segmented";
 import { BodyweightErrorAction } from "@/components/BodyweightErrorAction";
 import { isBodyweightRequired, onBodyweightSaved } from "@/lib/api/bodyweight-events";
 import { MuscleMap } from "./MuscleMap";
@@ -47,39 +47,29 @@ export function MuscleMapCard() {
   }, [period, load]);
 
   useEffect(() => {
-    // A body-weight save anywhere heals this card without a manual retry.
     return onBodyweightSaved(() => {
       void load(period);
     });
   }, [period, load]);
 
   return (
-    <Card
-      title="Muscle map"
-      action={
-        <span className="flex items-center gap-2">
-          <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted">
-            Calculated
-          </span>
-          <span className="flex rounded-lg border border-border p-0.5" role="tablist" aria-label="Map period">
-            {(Object.keys(PERIOD_LABEL) as MapPeriod[]).map((p) => (
-              <button
-                key={p}
-                type="button"
-                role="tab"
-                aria-selected={period === p}
-                onClick={() => setPeriod(p)}
-                className={`min-h-11 rounded-md px-3 text-xs transition-colors ${
-                  period === p ? "bg-accent-fill font-medium text-white" : "text-muted"
-                }`}
-              >
-                {p === "7d" ? "7d" : "30d"}
-              </button>
-            ))}
-          </span>
-        </span>
-      }
-    >
+    <section className="flex flex-col gap-4 border-t-2 border-foreground/80 pt-4">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="flex flex-col gap-1">
+          <p className="eyebrow">Body — Trained vs rested</p>
+          <h2 className="font-display text-3xl tracking-tight md:text-4xl">
+            Muscle map<span className="text-acid">.</span>
+          </h2>
+        </div>
+        <div className="w-40">
+          <Segmented
+            options={["7d", "30d"] as const}
+            value={period}
+            onChange={setPeriod}
+            ariaLabel="Map period"
+          />
+        </div>
+      </div>
       {error && (
         <ErrorNote
           message={error}
@@ -100,14 +90,14 @@ export function MuscleMapCard() {
         </div>
       )}
       {!error && groups !== null && groups.length === 0 && (
-        <p className="py-6 text-center text-sm text-muted">
-          No sets logged in the {PERIOD_LABEL[period]}. Log a workout and trained muscles light
-          up here.
-        </p>
+        <div className="flex flex-col gap-1 py-6">
+          <p className="text-lg font-semibold">Nothing trained in the {PERIOD_LABEL[period]}.</p>
+          <p className="text-sm text-muted">Log a session and trained muscle lights up here.</p>
+        </div>
       )}
       {!error && groups !== null && groups.length > 0 && (
         <MuscleMap groups={groups} periodLabel={PERIOD_LABEL[period]} />
       )}
-    </Card>
+    </section>
   );
 }

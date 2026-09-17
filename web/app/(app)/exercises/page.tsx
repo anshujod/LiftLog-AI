@@ -15,8 +15,13 @@ export default function ExercisesPage() {
   }
 
   return (
-    <div className="flex flex-1 flex-col">
-      <h1 className="px-4 pt-4 text-2xl font-semibold">Exercises</h1>
+    <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-5 px-4 pb-10 pt-4 md:max-w-3xl md:px-8">
+      <div className="flex flex-col gap-1">
+        <p className="eyebrow">Library — Movements</p>
+        <h1 className="font-display text-[clamp(40px,9vw,64px)] leading-[0.9]">
+          Exercises<span className="text-acid">.</span>
+        </h1>
+      </div>
       <ExercisePicker variant="page" onSelect={goToExercise} onAddCustom={() => setShowAddSheet(true)} />
       {showAddSheet && (
         <AddExerciseSheet

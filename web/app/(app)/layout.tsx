@@ -4,7 +4,8 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { BodyweightGate } from "@/components/BodyweightGate";
 import { BottomNav } from "@/components/BottomNav";
-import { ResumeWorkoutBanner } from "@/components/ResumeWorkoutBanner";
+import { Sidebar } from "@/components/Sidebar";
+import { AppHeader } from "@/components/AppHeader";
 import { SkeletonStack } from "@/components/ui/Skeleton";
 import { useAuth } from "@/lib/auth/AuthProvider";
 
@@ -25,11 +26,16 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
   }
 
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-xl flex-col pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] pt-[env(safe-area-inset-top)]">
-      <ResumeWorkoutBanner />
-      <BodyweightGate />
-      <main className="flex min-h-0 flex-1 flex-col">{children}</main>
-      <BottomNav />
+    <div className="mx-auto flex min-h-dvh w-full max-w-6xl flex-col pt-[env(safe-area-inset-top)] md:flex-row">
+      <Sidebar />
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]">
+        <AppHeader />
+        <BodyweightGate />
+        <main className="flex min-h-0 flex-1 flex-col">{children}</main>
+        <div className="sticky bottom-0 z-40">
+          <BottomNav />
+        </div>
+      </div>
     </div>
   );
 }

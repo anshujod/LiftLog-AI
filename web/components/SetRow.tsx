@@ -24,6 +24,9 @@ function formatValue(value: number): string {
   return value % 1 === 0 ? String(value) : value.toFixed(1);
 }
 
+const NUMERAL_CLASSES =
+  "h-14 rounded-[2px] border border-transparent bg-sunken text-center font-display text-2xl tracking-wide tabular-nums outline-none focus:border-acid";
+
 export function SetRow({ unit, incrementG, initial, mode, syncStatus, onSave, onChange, onDelete }: SetRowProps) {
   const [loadG, setLoadG] = useState(initial.load_g);
   const [loadText, setLoadText] = useState(formatValue(gToUnitValue(initial.load_g, unit)));
@@ -104,28 +107,28 @@ export function SetRow({ unit, incrementG, initial, mode, syncStatus, onSave, on
   }
 
   return (
-    <div className={`flex items-center gap-2 py-1.5 ${mode === "draft" ? "animate-log-flash" : ""}`}>
+    <div className={`flex items-center gap-1.5 py-1.5 ${mode === "draft" ? "animate-log-flash" : ""}`}>
       <button
         type="button"
         onClick={toggleWarmup}
         aria-pressed={isWarmup}
         title="Warmup set"
-        className={`h-11 shrink-0 rounded-lg border px-3 text-xs font-medium uppercase tracking-wide ${
-          isWarmup ? "border-accent bg-accent/10 text-accent" : "border-border text-muted"
+        className={`h-14 w-11 shrink-0 rounded-[2px] border text-xs font-bold uppercase tracking-[0.12em] ${
+          isWarmup ? "border-acid bg-acid/10 text-acid" : "hairline text-faint"
         }`}
       >
         W
       </button>
 
-      <div className="flex min-w-0 flex-1 items-center gap-1">
+      <div className="flex min-w-0 flex-1 items-center">
         <button
           type="button"
           onClick={() => step(-incrementG)}
-          className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-lg border border-border leading-none text-muted"
+          className="flex h-14 w-10 shrink-0 flex-col items-center justify-center leading-none text-muted"
           aria-label={`Decrease by ${gToUnitValue(incrementG, unit)} ${unit}`}
         >
-          <span className="text-lg">−</span>
-          <span className="tabular-nums text-[10px]">{stepDisplay}</span>
+          <span className="text-2xl">−</span>
+          <span className="tabular-nums text-[10px] text-faint">{stepDisplay}</span>
         </button>
         <input
           ref={loadInputRef}
@@ -138,21 +141,21 @@ export function SetRow({ unit, incrementG, initial, mode, syncStatus, onSave, on
           onKeyDown={(e) => {
             if (e.key === "Enter") repsInputRef.current?.focus();
           }}
-          className="h-11 w-20 min-w-0 rounded-lg border border-border bg-surface text-center text-lg font-medium tabular-nums outline-none focus:border-accent"
+          className={`${NUMERAL_CLASSES} w-[76px] min-w-0 flex-1`}
           aria-label={`Load in ${unit}`}
         />
         <button
           type="button"
           onClick={() => step(incrementG)}
-          className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-lg border border-border leading-none text-muted"
+          className="flex h-14 w-10 shrink-0 flex-col items-center justify-center leading-none text-muted"
           aria-label={`Increase by ${gToUnitValue(incrementG, unit)} ${unit}`}
         >
-          <span className="text-lg">+</span>
-          <span className="tabular-nums text-[10px]">{stepDisplay}</span>
+          <span className="text-2xl">+</span>
+          <span className="tabular-nums text-[10px] text-faint">{stepDisplay}</span>
         </button>
       </div>
 
-      <span className="text-xs text-muted" aria-hidden="true">
+      <span className="shrink-0 font-display text-lg text-faint" aria-hidden="true">
         ×
       </span>
 
@@ -165,7 +168,7 @@ export function SetRow({ unit, incrementG, initial, mode, syncStatus, onSave, on
         onChange={(e) => setRepsText(e.target.value)}
         onBlur={commitRepsText}
         onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
-        className="h-11 w-16 shrink-0 rounded-lg border border-border bg-surface text-center text-lg font-medium tabular-nums outline-none focus:border-accent"
+        className={`${NUMERAL_CLASSES} w-[72px] shrink-0`}
         aria-label="Reps"
       />
 
@@ -173,21 +176,21 @@ export function SetRow({ unit, incrementG, initial, mode, syncStatus, onSave, on
         <button
           type="button"
           onClick={handleLogSet}
-          className="h-11 shrink-0 rounded-lg bg-accent-fill px-4 text-sm font-medium text-white"
+          className="slab-press h-14 shrink-0 rounded-[2px] bg-acid px-6 font-display text-lg tracking-wide text-background"
         >
           Log
         </button>
       ) : (
         <>
           <span
-            className={`h-2.5 w-2.5 shrink-0 rounded-full ${syncStatus === "pending" ? "animate-pulse bg-muted" : "bg-success"}`}
+            className={`h-1.5 w-1.5 shrink-0 ${syncStatus === "pending" ? "animate-pulse bg-muted" : "bg-acid"}`}
             aria-label={syncStatus === "pending" ? "Syncing" : "Saved"}
           />
           <button
             type="button"
             onClick={handleDeletePress}
-            className={`h-11 shrink-0 rounded-lg text-lg leading-none ${
-              confirmingDelete ? "bg-danger/15 px-3 text-sm font-medium text-danger" : "w-11 text-danger"
+            className={`flex h-14 shrink-0 items-center justify-center rounded-[2px] leading-none ${
+              confirmingDelete ? "bg-danger/15 px-3 text-sm font-medium text-danger" : "w-10 text-xl text-faint"
             }`}
             aria-label={confirmingDelete ? "Confirm delete" : "Delete set"}
           >
