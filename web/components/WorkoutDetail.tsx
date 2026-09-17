@@ -157,7 +157,10 @@ export function WorkoutDetail({ workoutId }: WorkoutDetailProps) {
       </Link>
 
       {finishSummary && (
-        <div className="flex flex-col gap-6 border-t-2 border-acid pt-5">
+        <div
+          data-testid="workout-summary"
+          className="flex flex-col gap-6 border-t-2 border-acid pt-5"
+        >
           <div className="flex flex-col gap-2">
             <p className="eyebrow">Session — Complete</p>
             <h1 className="font-display text-[clamp(48px,12vw,88px)] leading-[0.9]">
