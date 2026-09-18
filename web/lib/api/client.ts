@@ -48,11 +48,20 @@ async function rawFetch(path: string, init: ApiFetchOptions): Promise<Response> 
     headers.set("Authorization", `Bearer ${token}`);
   }
 
-  return fetch(`${API_BASE_URL}${path}`, {
-    ...init,
-    headers,
-    body: init.body !== undefined ? JSON.stringify(init.body) : undefined,
-  });
+  // 10s timeout so a sleeping free-tier backend fails fast to skeletons/retry
+  // instead of hanging the page on mobile radio.
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10_000);
+  try {
+    return await fetch(`${API_BASE_URL}${path}`, {
+      ...init,
+      headers,
+      body: init.body !== undefined ? JSON.stringify(init.body) : undefined,
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 let refreshInFlight: Promise<boolean> | null = null;
@@ -77,8 +86,51 @@ async function refreshAccessToken(): Promise<boolean> {
 /**
  * Thin fetch wrapper for the LiftLog API. Attaches the in-memory access token,
  * transparently refreshes once on a 401, and throws typed errors otherwise.
+ *
+ * GETs are de-duplicated in flight and served stale-while-revalidate for 15s
+ * so 5 mounted useActiveWorkoutId() instances + dashboard + header collapse
+ * to one network request on navigation bursts.
  */
+const GET_CACHE_TTL_MS = 15_000;
+const getCache = new Map<string, { value: unknown; expiresAt: number }>();
+const getInflight = new Map<string, Promise<unknown>>();
+
+function isCacheableGet(path: string, init: ApiFetchOptions): boolean {
+  const method = (init.method ?? "GET").toUpperCase();
+  return method === "GET" && init.body === undefined;
+}
+
+/** Test/dev escape hatch: drop the GET cache (e.g. after logout/account switch). */
+export function clearApiCache(): void {
+  getCache.clear();
+  getInflight.clear();
+}
+
 export async function apiFetch<T>(path: string, init: ApiFetchOptions = {}): Promise<T> {
+  if (isCacheableGet(path, init)) {
+    const now = Date.now();
+    const cached = getCache.get(path);
+    if (cached && cached.expiresAt > now) return cached.value as T;
+    const inflight = getInflight.get(path);
+    if (inflight) return inflight as Promise<T>;
+    const request = fetchUncached<T>(path, init)
+      .then((value) => {
+        getCache.set(path, { value, expiresAt: Date.now() + GET_CACHE_TTL_MS });
+        return value;
+      })
+      .finally(() => {
+        getInflight.delete(path);
+      });
+    getInflight.set(path, request);
+    return request;
+  }
+  const value = await fetchUncached<T>(path, init);
+  // Mutations invalidate GETs they may have changed (dashboard/workout lists).
+  if ((init.method ?? "GET").toUpperCase() !== "GET") getCache.clear();
+  return value;
+}
+
+async function fetchUncached<T>(path: string, init: ApiFetchOptions): Promise<T> {
   let response = await rawFetch(path, init);
 
   if (response.status === 401 && !init.skipAuth) {

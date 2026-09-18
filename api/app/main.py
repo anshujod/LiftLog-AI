@@ -15,6 +15,12 @@ def create_app() -> FastAPI:
     settings = get_settings()
     app = FastAPI(title="LiftLog AI")
 
+    # Added in reverse of execution (Starlette runs last-added first).
+    # Execution order is CORS → RequestID → SecurityHeaders → RateLimit.
+    # CORS is outermost so preflights never pay JWT-decode/logging/rate-limit.
+    app.add_middleware(RateLimitMiddleware)
+    app.add_middleware(SecurityHeadersMiddleware)
+    app.add_middleware(RequestIDMiddleware)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origin_list,
@@ -22,11 +28,6 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    # Added last so they run first: every request gets an id before anything
-    # else touches it. Execution order is RequestID → SecurityHeaders → RateLimit.
-    app.add_middleware(RateLimitMiddleware)
-    app.add_middleware(SecurityHeadersMiddleware)
-    app.add_middleware(RequestIDMiddleware)
 
     register_exception_handlers(app)
 

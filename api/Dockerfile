@@ -4,12 +4,16 @@ RUN pip install --no-cache-dir uv
 
 WORKDIR /app
 
-COPY pyproject.toml ./
-RUN uv sync --no-install-project
+# Dependency layer first for cache hits: code changes must not reinstall deps.
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev --no-install-project
 
-COPY . .
-RUN uv sync
-RUN chmod +x start.sh
+COPY app ./app
+COPY alembic ./alembic
+COPY alembic.ini ./
+COPY seeds ./seeds
+COPY start.sh ./
+RUN uv sync --frozen --no-dev && chmod +x start.sh
 
 EXPOSE 8000
 

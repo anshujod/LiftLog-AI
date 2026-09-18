@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import {
   getDashboard,
   getPlateaus,
@@ -11,16 +12,27 @@ import {
 } from "@/lib/api/analytics";
 import { analyzeProgress, type ProgressInsight } from "@/lib/api/ai";
 import { listWorkouts, type WorkoutSummary } from "@/lib/api/workouts";
-import { SimpleBarChart, type BarPoint } from "@/components/charts/SimpleBarChart";
-import { MuscleMapCard } from "@/components/MuscleMap/MuscleMapCard";
-import { RecoveryCard } from "@/components/MuscleMap/RecoveryCard";
+import type { BarPoint } from "@/components/charts/SimpleBarChart";
 import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { formatAbsoluteDate, formatRelativeDate } from "@/lib/dates";
 import { describeVolumeDelta } from "@/lib/metrics/honest";
 
+const SimpleBarChart = dynamic(
+  () => import("@/components/charts/SimpleBarChart").then((m) => m.SimpleBarChart),
+  { ssr: false, loading: () => <Skeleton className="h-[180px]" /> }
+);
+const MuscleMapCard = dynamic(
+  () => import("@/components/MuscleMap/MuscleMapCard").then((m) => m.MuscleMapCard),
+  { ssr: false, loading: () => <Skeleton className="h-[300px]" /> }
+);
+const RecoveryCard = dynamic(
+  () => import("@/components/MuscleMap/RecoveryCard").then((m) => m.RecoveryCard),
+  { ssr: false, loading: () => <Skeleton className="h-[300px]" /> }
+);
+
 const WORKOUT_FREQUENCY_WEEKS = 12;
-const WORKOUTS_FETCH_LIMIT = 100;
+const WORKOUTS_FETCH_LIMIT = 20;
 
 function weekStartKey(iso: string): string {
   const d = new Date(`${iso}T00:00:00`);

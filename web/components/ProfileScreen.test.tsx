@@ -7,6 +7,13 @@ import { notifyBodyweightSaved } from "@/lib/api/bodyweight-events";
 
 vi.mock("@/lib/api/me", () => ({
   getMe: vi.fn(),
+  getMeCached: vi.fn().mockResolvedValue({
+    id: "user-1",
+    email: "lifter@example.com",
+    unit_preference: "kg",
+    bodyweight_g: null,
+  }),
+  resetMeCache: vi.fn(),
   updateBodyweight: vi.fn(),
   updateUnitPreference: vi.fn(),
 }));

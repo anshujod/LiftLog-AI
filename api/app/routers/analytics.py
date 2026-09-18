@@ -1,6 +1,6 @@
 from typing import Literal
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Response
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_current_user
@@ -21,9 +21,13 @@ router = APIRouter(prefix="/analytics", tags=["analytics"])
 
 @router.get("/dashboard", response_model=DashboardOut)
 def get_dashboard(
+    response: Response,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> DashboardOut:
+    # 30s server TTL (see dashboard_cache) + 15s client SWR: collapses the
+    # home navigation burst without risking stale training data.
+    response.headers["Cache-Control"] = "private, max-age=15, stale-while-revalidate=30"
     return analytics_service.get_dashboard(db, current_user)
 
 

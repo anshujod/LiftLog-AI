@@ -86,6 +86,10 @@ def analyze_progress(
     db: Session, user: User, ai: AIService, period: Period, exercise_id: uuid.UUID | None
 ) -> AnalyzeProgressOut:
     payload = build_progress_payload(db, user, period, exercise_id)
+    # Release the pooled connection before blocking up to 30s on the LLM —
+    # the request dependency closes the session anyway; closing here returns
+    # it early so mobile dashboard fan-out never queues behind AI.
+    db.close()
     insight: Insight = ai.analyze_progress(payload)
     return AnalyzeProgressOut(insight=insight, payload=payload)
 
@@ -167,6 +171,9 @@ def build_recommendation(
         progression_direction=progression.direction if progression.has_data else None,
         progression_percent=progression.percent_change if progression.has_data else None,
     )
+    # Same pool hygiene as analyze_progress: payload is fully built, release
+    # the DB session before the blocking LLM call.
+    db.close()
     recommendation: Recommendation = ai.recommend_workout(payload)
     return WorkoutRecommendationOut(
         exercise_id=exercise.id,

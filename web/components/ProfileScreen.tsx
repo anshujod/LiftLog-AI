@@ -5,7 +5,6 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 import { getMe, updateBodyweight, updateUnitPreference, type Me } from "@/lib/api/me";
 import { ApiError } from "@/lib/api/errors";
 import {
-  getUnitPreference,
   gToUnitValue,
   resetUnitPreferenceCache,
   unitToG,
@@ -33,7 +32,8 @@ export function ProfileScreen() {
     try {
       const data = await getMe();
       setMe(data);
-      const preferred = await getUnitPreference().catch(() => data.unit_preference as Unit);
+      // Reuse the already-fetched unit preference — no second GET /me.
+      const preferred = data.unit_preference as Unit;
       setUnit(preferred);
       if (data.bodyweight_g !== null) {
         setWeightInput(String(gToUnitValue(data.bodyweight_g, preferred)));

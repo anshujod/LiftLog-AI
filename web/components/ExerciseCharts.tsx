@@ -1,12 +1,18 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import { getHistory, type Exercise, type SessionSummary } from "@/lib/api/exercises";
-import { TrendLineChart, type TrendPoint } from "@/components/charts/TrendLineChart";
+import type { TrendPoint } from "@/components/charts/TrendLineChart";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/Skeleton";
 
-const HISTORY_LIMIT = 100;
+const TrendLineChart = dynamic(
+  () => import("@/components/charts/TrendLineChart").then((m) => m.TrendLineChart),
+  { ssr: false, loading: () => <Skeleton className="h-[180px]" /> }
+);
+
+const HISTORY_LIMIT = 50;
 const MIN_POINTS = 2;
 
 interface ExerciseChartsProps {

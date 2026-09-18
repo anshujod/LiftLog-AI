@@ -6,7 +6,6 @@ import { useActiveWorkoutId } from "@/hooks/useActiveWorkoutId";
 import { getDashboard, type Dashboard as DashboardData } from "@/lib/api/analytics";
 import { weeklySummary, type WeekSummary } from "@/lib/api/ai";
 import { getWorkout, listWorkouts } from "@/lib/api/workouts";
-import { getLastSession } from "@/lib/api/exercises";
 import { ApiError } from "@/lib/api/errors";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -36,23 +35,21 @@ async function loadSuggestion(): Promise<Suggestion | null> {
   const workout = await getWorkout(lastFinished.id);
   if (workout.workout_exercises.length === 0) return null;
 
-  const exercises = await Promise.all(
-    workout.workout_exercises.map(async (we): Promise<SuggestionExercise> => {
-      let topSetDisplay: string | null = null;
-      try {
-        const last = await getLastSession(we.exercise.id);
-        const workingSets = last.session?.sets.filter((s) => !s.is_warmup) ?? [];
-        const top = workingSets.reduce<(typeof workingSets)[number] | null>(
-          (best, s) => (!best || s.load.grams > best.load.grams ? s : best),
-          null
-        );
-        topSetDisplay = top ? `${top.load.display} × ${top.reps}` : null;
-      } catch {
-        // missing a top-set line for one exercise isn't worth failing the block over
-      }
-      return { id: we.exercise.id, name: we.exercise.name, topSetDisplay };
-    })
-  );
+  // Derive top sets from the workout itself — no N+1 getLastSession fan-out.
+  // The last finished workout's own working sets are exactly "what you did
+  // last time", and this keeps the suggestion to 2 requests total.
+  const exercises: SuggestionExercise[] = workout.workout_exercises.map((we) => {
+    const workingSets = (we.sets ?? []).filter((s) => !s.is_warmup);
+    const top = workingSets.reduce<(typeof workingSets)[number] | null>(
+      (best, s) => (!best || s.load.grams > best.load.grams ? s : best),
+      null
+    );
+    return {
+      id: we.exercise.id,
+      name: we.exercise.name,
+      topSetDisplay: top ? `${top.load.display} × ${top.reps}` : null,
+    };
+  });
 
   return { workoutTitle: workout.title, exercises };
 }
@@ -76,9 +73,9 @@ function statusChip(
   return "Ready to train";
 }
 
-export function Dashboard() {
+export function Dashboard({ initialData }: { initialData?: DashboardData | null }) {
   const activeWorkoutId = useActiveWorkoutId();
-  const [data, setData] = useState<DashboardData | null>(null);
+  const [data, setData] = useState<DashboardData | null>(initialData ?? null);
   const [error, setError] = useState<string | null>(null);
   const [needsBodyweight, setNeedsBodyweight] = useState(false);
   const [suggestion, setSuggestion] = useState<Suggestion | null>(null);
@@ -114,10 +111,12 @@ export function Dashboard() {
   }
 
   useEffect(() => {
-    // Initial fetch only — Retry re-runs the same loader on demand.
+    // Server may have already rendered initialData — skip the duplicate fetch
+    // on mount so cold open costs one server request, not server + client.
+    if (initialData) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadDashboard();
-  }, [loadDashboard]);
+  }, [loadDashboard, initialData]);
 
   useEffect(() => {
     return onBodyweightSaved(() => {
