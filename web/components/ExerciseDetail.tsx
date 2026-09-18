@@ -68,14 +68,20 @@ export function ExerciseDetail({ exerciseId }: ExerciseDetailProps) {
       })
       .catch(() => {});
 
-    getExerciseLifetimeStats(exerciseId)
-      .then((s) => {
-        if (!cancelled) setStats(s);
-      })
-      .catch(() => {});
+    // Below-the-fold totals: same content, later slot so first paint
+    // (header + last session + chart) wins the network on mobile radio.
+    const idleOrTimeout: ReturnType<typeof setTimeout> = setTimeout(() => {
+      if (cancelled) return;
+      getExerciseLifetimeStats(exerciseId)
+        .then((s) => {
+          if (!cancelled) setStats(s);
+        })
+        .catch(() => {});
+    }, 800);
 
     return () => {
       cancelled = true;
+      clearTimeout(idleOrTimeout);
     };
   }, [exerciseId]);
 

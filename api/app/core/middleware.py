@@ -43,15 +43,22 @@ def client_ip_of(request: Request) -> str:
 
 
 def request_user_id(request: Request) -> str | None:
-    """Best-effort user id for logs only: decodes the bearer token without
-    touching the database. Never raises, never logs the token itself."""
+    """Best-effort user id for logs only: parses the JWT payload *without*
+    verifying the signature (no crypto on the log path). Auth still verifies
+    in dependencies.py — this never grants access, it only labels the log line."""
     scheme, _, token = request.headers.get("authorization", "").partition(" ")
     if scheme.lower() != "bearer" or not token.strip():
         return None
     try:
-        from app.core.security import decode_token
+        import base64
+        import json as _json
 
-        return str(decode_token(token.strip(), expected_type="access"))
+        payload_b64 = token.strip().split(".")[1]
+        # JWT base64url without padding.
+        payload_b64 += "=" * (-len(payload_b64) % 4)
+        payload = _json.loads(base64.urlsafe_b64decode(payload_b64).decode("utf-8"))
+        sub = payload.get("sub")
+        return str(sub) if sub is not None else None
     except Exception:
         return None
 

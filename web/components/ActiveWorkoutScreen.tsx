@@ -1,19 +1,31 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useActiveWorkout } from "@/hooks/useActiveWorkout";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
 import { useWakeLock } from "@/hooks/useWakeLock";
-import { ExercisePicker } from "@/components/ExercisePicker";
 import { FloatingVoiceButton } from "@/components/FloatingVoiceButton";
-import { VoiceConfirmSheet, type VoiceConfirmValues } from "@/components/VoiceConfirmSheet";
+import type { VoiceConfirmValues } from "@/components/VoiceConfirmSheet";
 import { WorkoutExerciseCard } from "@/components/WorkoutExerciseCard";
-import { BodyweightSheet } from "@/components/BodyweightSheet";
 import { RestTimer } from "@/components/RestTimer";
 import { ErrorNote } from "@/components/ui/ErrorNote";
 import { SkeletonStack } from "@/components/ui/Skeleton";
 import { getUnitPreference, type Unit } from "@/lib/units";
+
+const ExercisePicker = dynamic(
+  () => import("@/components/ExercisePicker").then((m) => m.ExercisePicker),
+  { ssr: false }
+);
+const VoiceConfirmSheet = dynamic(
+  () => import("@/components/VoiceConfirmSheet").then((m) => m.VoiceConfirmSheet),
+  { ssr: false }
+);
+const BodyweightSheet = dynamic(
+  () => import("@/components/BodyweightSheet").then((m) => m.BodyweightSheet),
+  { ssr: false }
+);
 import { parseVoiceCommand, type VoiceLogCommand } from "@/lib/voice/parse";
 import type { SetRowValues } from "@/components/SetRow";
 import { getExercise, listExercises, type Exercise } from "@/lib/api/exercises";

@@ -11,6 +11,14 @@ import { updateBodyweight } from "@/lib/api/me";
 
 vi.mock("@/lib/api/me", () => ({
   updateBodyweight: vi.fn(),
+  getMe: vi.fn(),
+  getMeCached: vi.fn().mockResolvedValue({
+    id: "user-1",
+    email: "lifter@example.com",
+    unit_preference: "kg",
+    bodyweight_g: null,
+  }),
+  resetMeCache: vi.fn(),
 }));
 
 const updateBodyweightMock = vi.mocked(updateBodyweight);

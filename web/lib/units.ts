@@ -1,4 +1,4 @@
-import { apiFetch } from "./api/client";
+import { getMeCached, resetMeCache } from "./api/me";
 
 export type Unit = "kg" | "lb";
 
@@ -41,19 +41,16 @@ export function formatLoad(grams: number, unit: Unit): string {
   return `${value.toFixed(1)} ${unit}`;
 }
 
-interface MeResponse {
-  unit_preference: Unit;
-}
-
 let cachedUnitPreference: Promise<Unit> | null = null;
 
-/** Fetches and caches the caller's unit preference from GET /me. */
+/** Fetches and caches the caller's unit preference via the shared /me cache. */
 export function getUnitPreference(): Promise<Unit> {
-  cachedUnitPreference ??= apiFetch<MeResponse>("/me").then((me) => me.unit_preference);
+  cachedUnitPreference ??= getMeCached().then((me) => me.unit_preference);
   return cachedUnitPreference;
 }
 
 /** Call after login/logout or a unit-preference change so the next read is fresh. */
 export function resetUnitPreferenceCache(): void {
   cachedUnitPreference = null;
+  resetMeCache();
 }

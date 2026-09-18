@@ -1,13 +1,19 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useState, type SubmitEvent } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { ApiError } from "@/lib/api/errors";
-import { GoogleSignInSection, isGoogleSignInEnabled } from "@/components/GoogleSignInSection";
+import { isGoogleSignInEnabled } from "@/components/GoogleSignInSection";
 import { Button } from "@/components/ui/Button";
 import { ErrorNote } from "@/components/ui/ErrorNote";
+
+const GoogleSignInSection = dynamic(
+  () => import("@/components/GoogleSignInSection").then((m) => m.GoogleSignInSection),
+  { ssr: false }
+);
 
 export function LoginForm() {
   const { login, loginWithGoogle } = useAuth();

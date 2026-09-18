@@ -10,12 +10,14 @@ UserSetRow = tuple[Set, date, uuid.UUID, Exercise, str]
 """(set, performed_on, workout_id, exercise, muscle_group_slug)"""
 
 
-def get_all_sets_for_user(db: Session, user_id: uuid.UUID) -> list[UserSetRow]:
+def get_all_sets_for_user(
+    db: Session, user_id: uuid.UUID, since: date | None = None
+) -> list[UserSetRow]:
     """Every set from every *finished* workout the user has ever logged, joined
     with the exercise and muscle group context needed to aggregate across
     exercises. Personal-scale data — filtering/grouping by period happens in
     Python rather than adding query variants per period."""
-    rows = db.execute(
+    stmt = (
         select(Set, Workout.performed_on, Workout.id, Exercise, MuscleGroup.slug)
         .join(WorkoutExercise, WorkoutExercise.id == Set.workout_exercise_id)
         .join(Workout, Workout.id == WorkoutExercise.workout_id)
@@ -23,7 +25,13 @@ def get_all_sets_for_user(db: Session, user_id: uuid.UUID) -> list[UserSetRow]:
         .join(MuscleGroup, MuscleGroup.id == Exercise.muscle_group_id)
         .where(Workout.user_id == user_id, Workout.ended_at.is_not(None))
         .order_by(Workout.performed_on.asc(), Workout.created_at.asc(), Set.set_number.asc())
-    ).all()
+    )
+    # Push period cutoffs to SQL when callers know them (muscle-groups/volume):
+    # less transfer + less Python filtering on mobile fan-out. Dashboard keeps
+    # since=None for PR correctness (recent-PRs need all-time bests context).
+    if since is not None:
+        stmt = stmt.where(Workout.performed_on >= since)
+    rows = db.execute(stmt).all()
     return [(row[0], row[1], row[2], row[3], row[4]) for row in rows]
 
 

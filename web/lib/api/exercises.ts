@@ -66,7 +66,8 @@ export interface ExerciseLifetimeStats {
   totalVolumeGrams: number;
 }
 
-const LIFETIME_STATS_MAX_PAGES = 20;
+const LIFETIME_STATS_MAX_PAGES = 5;
+const LIFETIME_STATS_PAGE_LIMIT = 50;
 
 /**
  * No backend aggregate exists for lifetime totals (Task 2.2 only shipped
@@ -81,7 +82,7 @@ export async function getExerciseLifetimeStats(
   let cursor: string | undefined;
 
   for (let page = 0; page < LIFETIME_STATS_MAX_PAGES; page++) {
-    const result = await getHistory(exerciseId, { limit: 100, cursor });
+    const result = await getHistory(exerciseId, { limit: LIFETIME_STATS_PAGE_LIMIT, cursor });
     sessionCount += result.sessions.length;
     totalVolumeGrams += result.sessions.reduce((sum, s) => sum + s.volume.grams, 0);
     if (!result.next_cursor) break;

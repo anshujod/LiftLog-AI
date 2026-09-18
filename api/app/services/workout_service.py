@@ -29,6 +29,7 @@ from app.schemas.workout import (
     WorkoutSummaryOut,
     WorkoutUpdate,
 )
+from app.services import dashboard_cache
 
 _LOAD_POSITIVE = (LoadType.BARBELL_TOTAL, LoadType.MACHINE_TOTAL, LoadType.DUMBBELL_PER_HAND)
 
@@ -56,8 +57,10 @@ def update_workout(db: Session, user: User, workout: Workout, data: WorkoutUpdat
 
 
 def delete_workout(db: Session, workout: Workout) -> None:
+    user_id = workout.user_id
     workout_repository.delete_workout(db, workout)
     db.commit()
+    dashboard_cache.invalidate(user_id)
 
 
 def list_workouts(db: Session, user: User, limit: int, cursor: str | None) -> WorkoutsPageOut:
@@ -130,6 +133,7 @@ def bulk_replace_sets(
         _validate_load(load_type, data.load_g, data.reps)
     created = workout_repository.replace_sets(db, workout_exercise.id, sets_in)
     db.commit()
+    dashboard_cache.invalidate(user.id)
     unit = _unit(user)
     return [_set_out(s, unit) for s in created]
 
@@ -202,6 +206,7 @@ def finish_workout(db: Session, user: User, workout: Workout) -> FinishSummaryOu
     if started_at is not None and detail.ended_at is not None:
         duration_minutes = max(0, round((detail.ended_at - started_at).total_seconds() / 60))
 
+    dashboard_cache.invalidate(user.id)
     return FinishSummaryOut(
         exercise_count=exercise_count,
         total_working_sets=total_working_sets,

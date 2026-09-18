@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { setAccessToken } from "@/lib/api/token-store";
+import { clearApiCache } from "@/lib/api/client";
 import { resetUnitPreferenceCache } from "@/lib/units";
 import { ApiError } from "@/lib/api/errors";
 
@@ -74,6 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (email: string, password: string) => {
     const data = await postJson<TokenResponse>("/api/auth/login", { email, password });
     setAccessToken(data.access_token);
+    clearApiCache();
     resetUnitPreferenceCache();
     setStatus("authenticated");
   }, []);
@@ -81,6 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = useCallback(async (email: string, password: string) => {
     const data = await postJson<TokenResponse>("/api/auth/register", { email, password });
     setAccessToken(data.access_token);
+    clearApiCache();
     resetUnitPreferenceCache();
     setStatus("authenticated");
   }, []);
@@ -88,6 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loginWithGoogle = useCallback(async (idToken: string) => {
     const data = await postJson<TokenResponse>("/api/auth/google", { id_token: idToken });
     setAccessToken(data.access_token);
+    clearApiCache();
     resetUnitPreferenceCache();
     setStatus("authenticated");
   }, []);
@@ -95,6 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(async () => {
     await fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
     setAccessToken(null);
+    clearApiCache();
     resetUnitPreferenceCache();
     setStatus("unauthenticated");
     router.replace("/login");

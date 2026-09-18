@@ -159,10 +159,8 @@ def get_exercise_progress(
 
 
 def get_muscle_group_volume(db: Session, user: User, period: Period) -> list[MuscleGroupVolumeOut]:
-    rows = _since(
-        analytics_repository.get_all_sets_for_user(db, user.id),
-        _period_cutoff(period, date.today()),
-    )
+    cutoff = _period_cutoff(period, date.today())
+    rows = analytics_repository.get_all_sets_for_user(db, user.id, since=cutoff)
     records = [_to_exercise_set_record(r) for r in rows]
     results = volume_by_muscle_group(records, user.bodyweight_g)
 
@@ -209,10 +207,8 @@ def get_muscle_recovery(db: Session, user: User) -> list[MuscleRecoveryOut]:
 def get_volume(
     db: Session, user: User, period: Period, granularity: Literal["week", "month"]
 ) -> list[VolumeByPeriodOut]:
-    rows = _since(
-        analytics_repository.get_all_sets_for_user(db, user.id),
-        _period_cutoff(period, date.today()),
-    )
+    cutoff = _period_cutoff(period, date.today())
+    rows = analytics_repository.get_all_sets_for_user(db, user.id, since=cutoff)
     records = [_to_exercise_set_record(r) for r in rows]
     results = volume_by_period(records, user.bodyweight_g, granularity)
     unit = _unit(user)
@@ -258,6 +254,17 @@ def get_plateaus(db: Session, user: User) -> list[PlateauOut]:
 
 
 def get_dashboard(db: Session, user: User) -> DashboardOut:
+    from app.services import dashboard_cache
+
+    cached = dashboard_cache.get(user.id)
+    if isinstance(cached, DashboardOut):
+        return cached
+    result = _compute_dashboard(db, user)
+    dashboard_cache.put(user.id, result)
+    return result
+
+
+def _compute_dashboard(db: Session, user: User) -> DashboardOut:
     today = date.today()
     unit = _unit(user)
 

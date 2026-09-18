@@ -114,7 +114,11 @@ def get_all_sets_for_exercise(
         select(Set, Workout.performed_on, Workout.id)
         .join(WorkoutExercise, WorkoutExercise.id == Set.workout_exercise_id)
         .join(Workout, Workout.id == WorkoutExercise.workout_id)
-        .where(WorkoutExercise.exercise_id == exercise_id, Workout.user_id == user_id)
+        .where(
+            WorkoutExercise.exercise_id == exercise_id,
+            Workout.user_id == user_id,
+            Workout.ended_at.is_not(None),
+        )
         .order_by(Workout.performed_on.asc(), Workout.created_at.asc(), Set.set_number.asc())
     ).all()
     return [(row[0], row[1], row[2]) for row in rows]

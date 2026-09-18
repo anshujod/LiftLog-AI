@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from functools import lru_cache
 from pathlib import Path
 from typing import Protocol
 
@@ -19,6 +20,11 @@ _PROMPTS_DIR = Path(__file__).parent / "prompts"
 
 
 def load_system_prompt(name: str, version: str = PROMPT_VERSION) -> str:
+    return _load_system_prompt_cached(name, version)
+
+
+@lru_cache(maxsize=16)
+def _load_system_prompt_cached(name: str, version: str) -> str:
     return (_PROMPTS_DIR / f"{name}.{version}.system.txt").read_text().strip()
 
 

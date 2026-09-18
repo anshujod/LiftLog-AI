@@ -7,6 +7,9 @@ import { getUnitPreference } from "@/lib/units";
 
 vi.mock("@/lib/api/me", () => ({
   updateBodyweight: vi.fn(),
+  getMe: vi.fn(),
+  getMeCached: vi.fn(),
+  resetMeCache: vi.fn(),
 }));
 
 vi.mock("@/lib/units", async (importOriginal) => {
